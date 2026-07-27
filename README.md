@@ -1,2 +1,17 @@
 # create-harness
-CLI to scaffold AI coding agent context files (CLAUDE.md, .cursorrules, AGENTS.md, and more) for any project — start with a fully configured harness for your dev workflow in seconds.
+
+> Scaffold your AI coding agent's context files in one command.
+
+`create-harness` bootstraps the config and context files that AI coding agents
+(Claude Code, Cursor, Codex, and others) rely on — `CLAUDE.md`, `.cursorrules`,
+`AGENTS.md`, and project-specific workflow rules — so every project starts
+with a consistent "harness" for AI-assisted development.
+
+Originally built for React/frontend projects, but framework-agnostic by design —
+works for backend, full-stack, or any language.
+
+## Why
+Every AI coding agent expects its own context file, and every project reinvents
+the same rules (coding conventions, review checklist, folder structure, PR flow)
+from scratch. `create-harness` gives you a sane, opinionated starting point
+you can customize per project.
