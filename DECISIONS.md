@@ -80,3 +80,73 @@ hrd-aimon-fe 사본에 실제 적용해 보니, 생성 파일이 **대상 프로
   파일명에서 `.stories.` 를 빼는 것이 유일하게 안전하다.
 - Storybook 설치 산출물(`.storybook/`, `vitest.shims.d.ts`, 예제 `src/stories/`)의
   린트 정합은 `/ds-init` 워크플로의 명시적 단계로 편입했다.
+
+## 8. 모듈 기본값의 판단 기준은 "취향"이 아니라 "설치 직후 검증 통과"다
+
+모듈 4종(design-system·auth-http·data-fetching·lint)을 전부 기본 ON으로 두면,
+axios 없는 프로젝트에 `axiosInstance.ts` 가 들어가 **첫 typecheck가 즉시 깨진다.**
+하네스의 첫인상이 "검증 실패"인 것은 도구의 존재 이유와 정면으로 충돌한다.
+
+그래서 `suggest.ts` 의 추천 기준을 단 하나로 고정했다 — *생성 직후 그대로
+컴파일·통과하는가.* 이 기준은 검증 가능하고 취향 논쟁이 없다.
+
+- `auth-http`: axios + react-router + Vite (참조 구현이 `import.meta.env.VITE_*` 를 쓴다)
+- `data-fetching`: TanStack Query + Zustand + axios
+- `design-system`: Tailwind·CSS-in-JS 면 OFF — stylelint 색상 강제가 유틸리티 클래스나
+  TS 안의 값에 **닿지 못한다.** 통과는 하지만 아무것도 강제하지 못하는 규칙은 해롭다
+  (지켜지고 있다는 착각을 준다).
+- `lint`: flat config 없으면 OFF — 규칙 조각을 spread할 대상이 없다.
+
+비추천을 **숨기지는 않는다.** 대화형에서는 `(비권장)` + 근거를 달아 목록에 그대로 두고,
+`--yes` 경로에서는 제외된 모듈과 이유를 반드시 출력한다. `--modules` 를 명시하면
+추천 로직을 완전히 우회한다 — "지금은 없지만 이 규약을 도입하겠다"는 선택을 막을 이유가 없다.
+
+## 9. 모듈을 빼면 그 모듈을 전제하는 규칙도 뺀다
+
+Tailwind 프로젝트에서 `design-system` 모듈이 빠져도 `30-design-system` 규칙은 코어라
+항상 생성됐다. 그 규칙은 존재하지 않는 `src/design-system/tokens.css` 를 가리킨다.
+에이전트에게 없는 파일을 참조하라고 시키는 셈이고, 그러면 파일을 **지어낸다.**
+
+그래서 규칙 정본에 모듈 의존성을 선언하고(`RULE_MODULE_REQUIREMENT`), 워크플로도
+`/ds-init`·`/ds-add` 는 디자인시스템 모듈에 묶었다. `AGENTS.md` 처럼 여러 절이 한
+파일에 있는 경우를 위해 렌더러에 `{{#if FLAG}}` 블록을 추가했다.
+
+대안이었던 "규칙을 토큰 강제 / 컴포넌트 선행으로 쪼개기"와 "Tailwind 전용 변형 두기"는
+채택하지 않았다. 전자는 규칙 파일 수를 늘려 로드 비용만 키우고, 후자는 규칙 정본이
+둘로 갈라져 유지비가 배로 든다(Tailwind v3의 `tailwind.config.js` 와 v4의 `@theme` 가
+또 달라 실질 변형은 셋이 된다).
+
+**대신 하네스의 입장을 명시한다** — 디자인시스템 모듈은 켜는 것을 권장하고, Tailwind는
+권장하지 않는다. UI 드리프트를 결정적으로 막는 수단이 토큰 + stylelint 하나뿐인데
+Tailwind는 그 수단을 무력화한다. 모듈 없이 진행하면 CLI가 이 근거를 출력한다.
+
+## 10. 브라운필드 stylelint는 전부 warning이 아니라 파일 단위 유예다
+
+hrd-aimon-fe에 얹었을 때 색상 원시값 637건이 한 번에 막혔다. 이 상태로는 사용자가
+게이트를 꺼버리고, 그러면 하네스 전체가 무의미해진다.
+
+처음엔 `severity: 'warning'` 을 전역으로 켜는 방안을 생각했다. 실제로 넣어 보니
+기존 코드는 통과하지만 **새로 쓰는 CSS의 위반도 함께 warning이 됐다** — 드리프트를
+막겠다는 목적 자체가 사라진다.
+
+그래서 설치 시점에 원시값을 쓰던 파일 목록을 `.harness/stylelint-baseline.json` 에
+기록하고 `overrides` 로 그 파일들만 warning으로 낮춘다. 새 파일은 error 그대로다.
+검증: 기존 84개 파일 → 640 warnings / exit 0, 새 파일 하나 추가 → 3 errors / exit 2.
+
+목록은 줄어들기만 하는 부채 목록이라 진행 상황이 눈에 보인다. 비면 `overrides` 를
+지우면 끝이다.
+
+부수적으로 발견한 것 — `stylelint-declaration-strict-value` 는 `ignoreFunctions` 가
+기본 true라 `#hex` 는 잡아도 **`rgb()`·`hsl()` 은 통과시킨다.** 규칙 문서가 약속한 것과
+실제 강제가 달랐다. 색상 속성에 한해 `declaration-property-value-disallowed-list` 로
+따로 막았다 (background-image 그라디언트의 var() 조합은 그대로 허용된다).
+
+## 11. eslint ignores는 안내가 아니라 패치한다
+
+`.harness/**` 를 호스트 eslint ignores에 넣는 일을 매번 사람이 손으로 했다. 안내문은
+읽히지 않고, 안 넣으면 게이트의 첫 lint 체크가 하네스 자기 파일 때문에 깨진다.
+
+사용자 파일을 고치는 일이라 보수적으로 간다 — `export default [`,
+`export default tseslint.config(`, `export default defineConfig([` 세 형태만 인식하고,
+이미 있으면 아무것도 하지 않으며(멱등), 알아보지 못하면 파일을 건드리지 않고 조각만
+출력한다. 무엇을 넣었는지는 항상 stdout에 찍어 git diff로 확인할 수 있게 한다.

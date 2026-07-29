@@ -10,7 +10,9 @@ import pc from 'picocolors'
 import { detect } from './detect.js'
 import { writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
-import { buildPlan, requiredDevDeps } from './registry.js'
+import { patchEslintIgnores } from './eslintPatch.js'
+import { buildPlan, hasStylelintBaseline, requiredDevDeps } from './registry.js'
+import { recommendedModules, suggestModules } from './suggest.js'
 import type { IScaffoldOptions, TAgent, TModule } from './types.js'
 
 const VALID_AGENTS: TAgent[] = ['cursor', 'claude']
@@ -94,24 +96,6 @@ const main = async (): Promise<void> => {
     const targetDir = path.resolve(positionals[0] ?? '.')
     const detected = detect(targetDir)
 
-    const defaults: IScaffoldOptions = {
-        targetDir,
-        preset: 'react-fe',
-        agents: parseCsv(values.agents, VALID_AGENTS, 'agent') ?? [
-            'cursor',
-            'claude',
-        ],
-        modules: parseCsv(values.modules, VALID_MODULES, 'module') ?? [
-            'design-system',
-            'auth-http',
-            'data-fetching',
-            'lint',
-        ],
-        dryRun: values['dry-run'],
-        yes: values.yes,
-        install: values.install,
-    }
-
     if (!detected.hasPackageJson) {
         console.error(
             `대상에 package.json이 없습니다: ${targetDir}\n` +
@@ -120,7 +104,63 @@ const main = async (): Promise<void> => {
         process.exit(1)
     }
 
-    const options = await runPrompts(detected, defaults)
+    const suggestions = suggestModules(detected)
+    const explicitModules = parseCsv(values.modules, VALID_MODULES, 'module')
+
+    const defaults: IScaffoldOptions = {
+        targetDir,
+        preset: 'react-fe',
+        agents: parseCsv(values.agents, VALID_AGENTS, 'agent') ?? [
+            'cursor',
+            'claude',
+        ],
+        // --modules 를 주지 않으면 감지 결과가 기본값을 정한다
+        modules: explicitModules ?? recommendedModules(detected),
+        dryRun: values['dry-run'],
+        yes: values.yes,
+        install: values.install,
+    }
+
+    const options = await runPrompts(detected, defaults, suggestions)
+
+    // 감지 때문에 빠진 모듈은 이유를 남긴다 (--yes 로 프롬프트를 건너뛴 경우 특히)
+    const excluded = suggestions.filter(
+        (suggestion) =>
+            !suggestion.isRecommended &&
+            !options.modules.includes(suggestion.module),
+    )
+    if (explicitModules === undefined && excluded.length > 0) {
+        console.log(`\n${pc.dim('감지 결과로 제외된 모듈:')}`)
+        for (const suggestion of excluded) {
+            console.log(
+                `  ${pc.dim('-')} ${suggestion.module} — ${pc.dim(suggestion.reason)}`,
+            )
+        }
+        console.log(
+            pc.dim(`  포함하려면: --modules ${VALID_MODULES.join(',')}`),
+        )
+    }
+
+    // 이 하네스는 디자인시스템 모듈을 기본 전제로 삼는다 — 빠진 채로 넘어가지 않게 짚는다
+    if (!options.modules.includes('design-system')) {
+        const lines = [
+            `\n${pc.yellow('권고')} — design-system 모듈 없이 진행합니다.`,
+            pc.dim(
+                '  이 하네스가 UI 드리프트를 막는 유일한 결정적 수단이 토큰 + stylelint 입니다.\n' +
+                    '  규칙 문서만으로는 에이전트가 화면마다 다른 색·간격을 씁니다.',
+            ),
+        ]
+        if (detected.hasTailwind) {
+            lines.push(
+                pc.dim(
+                    '  Tailwind 는 값이 클래스 문자열 안에 있어 stylelint 가 닿지 못합니다.\n' +
+                        '  새 프로젝트라면 CSS Modules + tokens.css 조합을 권장합니다.',
+                ),
+            )
+        }
+        console.log(lines.join('\n'))
+    }
+
     const plan = buildPlan(detected, options)
     const results = writeActions(plan, targetDir, options.dryRun)
     writeManifest(results, options, getOwnVersion(), options.dryRun)
@@ -147,6 +187,31 @@ const main = async (): Promise<void> => {
         }
     }
 
+    const patch = patchEslintIgnores(detected, options.dryRun)
+    if (patch.status === 'patched') {
+        console.log(
+            `\n${pc.green('패치')} — ${patch.file} 에 하네스 파일 ignores 를 추가했습니다:\n` +
+                pc.dim(patch.snippet),
+        )
+    } else if (patch.status === 'unrecognized') {
+        console.log(
+            `\n${pc.yellow('수동 필요')} — ${patch.file} 의 export 형태를 알아보지 못했습니다.\n` +
+                `  설정 배열 안에 아래를 직접 넣으세요 (없으면 eslint가 .harness/ 를 검사합니다):\n` +
+                pc.dim(patch.snippet),
+        )
+    }
+
+    if (hasStylelintBaseline(detected, options)) {
+        console.log(
+            `\n${pc.yellow('stylelint 유예')} — 색상 원시값을 쓰던 기존 CSS ` +
+                `${detected.cssFilesWithRawColor.length}개를 .harness/stylelint-baseline.json 에 올렸습니다.\n` +
+                pc.dim(
+                    '  이 파일들만 warning 이고 새로 만드는 CSS는 error 입니다.\n' +
+                        '  정리할 때마다 목록에서 경로를 지우세요. 비면 stylelint.config.js 의 overrides 를 삭제하면 됩니다.',
+                ),
+        )
+    }
+
     const deps = requiredDevDeps(options)
     if (deps.length > 0) {
         console.log(
@@ -155,13 +220,17 @@ const main = async (): Promise<void> => {
             )}`,
         )
     }
+
+    const steps = [
+        'AGENTS.md 의 TODO와 docs/product-spec.md 를 프로젝트에 맞게 채우세요',
+        '.harness/config.json 의 checks 를 확인하세요 (게이트·/verify 가 이 목록을 실행합니다)',
+    ]
+    if (options.modules.includes('design-system')) {
+        steps.push('UI 작업 전이라면 /ds-init 워크플로로 Storybook을 설치하세요')
+    }
     console.log(
         `\n다음 단계:\n` +
-            `  1. AGENTS.md 의 TODO와 docs/product-spec.md 를 프로젝트에 맞게 채우세요\n` +
-            `  2. .harness/config.json 의 checks 를 확인하세요 (게이트·/verify 가 이 목록을 실행합니다)\n` +
-            `  3. eslint 설정의 ignores 에 '.harness/**' 를 추가하세요\n` +
-            `     (lint 모듈을 쓰면 eslint.harness.config.js 를 spread하는 것으로 충분합니다)\n` +
-            `  4. UI 작업 전이라면 /ds-init 워크플로로 Storybook을 설치하세요`,
+            steps.map((step, index) => `  ${index + 1}. ${step}`).join('\n'),
     )
     p.outro('done')
 }

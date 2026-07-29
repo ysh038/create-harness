@@ -38,10 +38,63 @@ npx create-harness [대상 디렉터리] [옵션]
 
 --preset <name>     프리셋 (v0.1: react-fe)
 --agents <csv>      cursor,claude (기본: 둘 다)
---modules <csv>     design-system,auth-http,data-fetching,lint (기본: 전부)
+--modules <csv>     design-system,auth-http,data-fetching,lint (기본: 감지 결과에 따름)
 --dry-run           파일을 쓰지 않고 계획만 출력
 -y, --yes           질문 없이 진행
 ```
+
+## 모듈 기본값은 감지 결과가 정한다
+
+코어(규칙·워크플로·게이트·docs)는 항상 설치되지만, **코드를 생성하는 모듈**은
+대상 프로젝트에서 그대로 컴파일·통과하는 것만 기본 선택됩니다.
+기준은 하나입니다 — 설치 직후 검증이 깨지지 않는가.
+
+| 모듈 | 기본 선택 조건 | 빠지는 경우 |
+|---|---|---|
+| `design-system` | CSS / CSS Modules | Tailwind, CSS-in-JS (stylelint가 값에 닿지 못함) |
+| `auth-http` | axios + react-router + Vite | fetch만 쓰거나 Next.js/CRA |
+| `data-fetching` | TanStack Query + Zustand + axios | SWR·Redux 등 다른 조합 |
+| `lint` | ESLint flat config + TypeScript | 구형 `.eslintrc`, JS 전용 |
+
+빠진 모듈은 이유와 함께 출력되고, `--modules` 로 명시하면 강제로 포함됩니다.
+대화형 실행에서는 비권장 모듈도 `(비권장)` 표시와 근거를 달고 목록에 나오므로 직접 켤 수 있습니다.
+
+모듈을 빼면 **그 모듈을 전제하는 규칙·워크플로도 함께 빠집니다.** 예를 들어
+`design-system` 없이 설치하면 `30-design-system` 규칙, `/ds-init`·`/ds-add` 워크플로,
+`AGENTS.md` 의 해당 항목이 모두 생성되지 않습니다. 존재하지 않는 파일을 가리키는
+규칙은 에이전트를 헷갈리게 할 뿐입니다.
+
+## 디자인시스템에 대한 입장
+
+`design-system` 모듈은 웬만하면 켜는 것을 권장합니다. AI 에이전트가 화면마다 다른
+색·간격을 쓰는 UI 드리프트를 막는 **결정적**(deterministic) 수단이 토큰 + stylelint
+하나뿐이기 때문입니다. 규칙 문서는 확률적으로만 지켜집니다.
+
+같은 이유로 이 하네스는 **Tailwind 를 권장하지 않습니다.** 값이 클래스 문자열 안에
+있어 stylelint 가 닿지 못하고, 임의값(`bg-[#3b82f6]`)을 막으려면 별도의 ESLint 규칙
+체계를 따로 유지해야 합니다. 새 프로젝트라면 CSS Modules + `tokens.css` 를 권장합니다.
+
+### 기존 프로젝트의 stylelint 유예
+
+이미 색상 원시값을 쓰는 CSS가 있는 프로젝트에 토큰 강제를 error로 얹으면 첫 커밋부터
+수백 건이 막혀 결국 게이트를 꺼버리게 됩니다. 그래서 설치 시점에 원시값을 쓰던 파일만
+`.harness/stylelint-baseline.json` 에 올려 **그 파일들만 warning** 으로 낮춥니다.
+새로 만드는 CSS는 그대로 error입니다. 정리할 때마다 목록에서 경로를 지우고, 비면
+`stylelint.config.js` 의 `overrides` 를 삭제하면 됩니다.
+
+## eslint ignores 자동 패치
+
+`.harness/` 안의 게이트 스크립트는 Node 인프라 코드라 호스트의 브라우저용 lint 설정에
+걸립니다. 그래서 설치 시 대상의 flat config(`eslint.config.*`)에 아래를 끼워 넣습니다.
+
+```js
+// create-harness: 하네스 생성 파일은 호스트 lint 대상이 아니다
+{ ignores: ['.harness/**'] },
+```
+
+`export default [`, `export default tseslint.config(`, `export default defineConfig([`
+형태를 인식하며, 이미 적용돼 있으면 아무것도 하지 않습니다(멱등). 알아보지 못하는
+형태면 파일을 건드리지 않고 붙여넣을 조각만 출력합니다.
 
 ## 충돌 처리
 

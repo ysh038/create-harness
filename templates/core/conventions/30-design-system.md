@@ -10,6 +10,11 @@ alwaysApply: false
 
 - 색상은 **반드시** `src/design-system/tokens.css` 의 CSS 변수만 쓴다.
   원시값(`#hex`, `rgb()`, 색상 키워드)은 stylelint가 error 처리한다.
+{{#if STYLELINT_BASELINE}}- 하네스 도입 전부터 원시값을 쓰던 CSS {{CSS_RAW_COLOR_FILES}}개는
+  `.harness/stylelint-baseline.json` 에 유예 목록으로 올라가 warning 으로만 뜬다.
+  **새로 만드는 파일은 유예 대상이 아니며 error다.** 유예 파일을 손볼 일이 생기면
+  그 김에 원시값을 토큰으로 바꾸고 목록에서 경로를 지운다.
+{{/if}}
 - **존재하지 않는 토큰 이름을 발명하지 않는다.** 필요한 토큰이 없으면
   먼저 `tokens.css` 와 `tokens.ts` 양쪽에 추가하고 나서 쓴다.
 - TS/JSX에서 토큰 값이 필요하면 `tokens.ts` 의 타입드 상수를 import한다 (문자열 하드코딩 금지).
@@ -21,7 +26,7 @@ alwaysApply: false
 .card { background: #ffffff; border-radius: 8px; }
 ```
 
-- v0.1 기준 stylelint는 **색상만** error다. 간격·타이포 토큰이 채워지면
+- stylelint는 **색상만** 검사한다. 간격·타이포 토큰이 채워지면
   `stylelint.config.js` 의 주석 처리된 속성을 켠다.
 
 ## UI 작업 절차 — 컴포넌트가 레이아웃보다 먼저

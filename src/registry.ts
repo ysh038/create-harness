@@ -13,6 +13,7 @@ import type {
     IFileAction,
     IHarnessConfig,
     IScaffoldOptions,
+    TModule,
     TPackageManager,
 } from './types.js'
 
@@ -30,6 +31,18 @@ const PM_EXEC: Record<TPackageManager, string> = {
     bun: 'bunx',
 }
 
+/**
+ * 기존 CSS에 색상 원시값이 남아 있으면 그 파일들만 유예 목록에 넣는다.
+ * 전부 error면 첫 커밋부터 막혀 게이트를 꺼버리게 되고,
+ * 전부 warning이면 새 코드의 드리프트를 못 막는다 — 목록으로 끊는다.
+ */
+export const hasStylelintBaseline = (
+    detected: IDetectResult,
+    options: IScaffoldOptions,
+): boolean =>
+    options.modules.includes('design-system') &&
+    detected.cssFilesWithRawColor.length > 0
+
 export const buildVars = (
     detected: IDetectResult,
     options: IScaffoldOptions,
@@ -41,6 +54,9 @@ export const buildVars = (
     RULES_DIR: options.agents.includes('cursor')
         ? '.cursor/rules'
         : 'docs/conventions',
+    DESIGN_SYSTEM: String(options.modules.includes('design-system')),
+    STYLELINT_BASELINE: String(hasStylelintBaseline(detected, options)),
+    CSS_RAW_COLOR_FILES: String(detected.cssFilesWithRawColor.length),
 })
 
 /**
@@ -95,30 +111,41 @@ const listTemplates = (relDir: string): string[] =>
         .filter((name) => !name.startsWith('.'))
         .sort()
 
+/** 해당 모듈을 빼면 그 모듈을 전제하는 규칙 정본도 같이 뺀다 */
+const RULE_MODULE_REQUIREMENT: Record<string, TModule> = {
+    '30-design-system.md': 'design-system',
+}
+
 /** templates/core/conventions/*.md → .cursor/rules/*.mdc (또는 docs/conventions/*.md) */
 const buildRuleActions = (
     options: IScaffoldOptions,
     vars: Record<string, string>,
 ): IFileAction[] =>
-    listTemplates('core/conventions').map((file) => {
-        const raw = loadTemplate(`core/conventions/${file}`, vars)
-        if (options.agents.includes('cursor')) {
-            const { meta, body } = parseFrontmatter(raw)
+    listTemplates('core/conventions')
+        .filter((file) => {
+            const required = RULE_MODULE_REQUIREMENT[file]
+            return !required || options.modules.includes(required)
+        })
+        .map((file) => {
+            const raw = loadTemplate(`core/conventions/${file}`, vars)
+            if (options.agents.includes('cursor')) {
+                const { meta, body } = parseFrontmatter(raw)
+                return {
+                    dest: `.cursor/rules/${file.replace(/\.md$/, '.mdc')}`,
+                    content: serializeFrontmatter(meta) + body,
+                    module: 'core',
+                }
+            }
+            // Cursor 미선택 시에는 규칙을 docs/conventions/ 아래 일반 문서로 둔다
             return {
-                dest: `.cursor/rules/${file.replace(/\.md$/, '.mdc')}`,
-                content: serializeFrontmatter(meta) + body,
+                dest: `docs/conventions/${file}`,
+                content: raw,
                 module: 'core',
             }
-        }
-        // Cursor 미선택 시에는 규칙을 docs/conventions/ 아래 일반 문서로 둔다
-        return {
-            dest: `docs/conventions/${file}`,
-            content: raw,
-            module: 'core',
-        }
-    })
+        })
 
-const WORKFLOWS = ['spec', 'impl', 'verify', 'ship', 'ds-init', 'ds-add']
+const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship']
+const DESIGN_SYSTEM_WORKFLOWS = ['ds-init', 'ds-add']
 
 /** templates/core/workflows → .cursor/commands + .claude/skills(SKILL.md) fan-out */
 const buildWorkflowActions = (
@@ -128,12 +155,18 @@ const buildWorkflowActions = (
     const actions: IFileAction[] = []
     const parsed = new Map<string, { meta: Record<string, string>; body: string }>()
 
-    for (const name of WORKFLOWS) {
+    // 디자인시스템 워크플로는 토큰·스토리 템플릿을 전제한다 — 모듈이 빠지면 함께 뺀다
+    const hasDesignSystem = options.modules.includes('design-system')
+    const workflows = hasDesignSystem
+        ? [...BASE_WORKFLOWS, ...DESIGN_SYSTEM_WORKFLOWS]
+        : BASE_WORKFLOWS
+
+    for (const name of workflows) {
         parsed.set(name, parseFrontmatter(loadTemplate(`core/workflows/${name}.md`, vars)))
     }
 
     if (options.agents.includes('cursor')) {
-        for (const name of WORKFLOWS) {
+        for (const name of workflows) {
             const { body } = parsed.get(name)!
             actions.push({
                 dest: `.cursor/commands/${name}.md`,
@@ -145,7 +178,7 @@ const buildWorkflowActions = (
 
     if (options.agents.includes('claude')) {
         // spec / impl / verify / ship 은 1:1 스킬
-        for (const name of ['spec', 'impl', 'verify', 'ship']) {
+        for (const name of BASE_WORKFLOWS) {
             const { meta, body } = parsed.get(name)!
             actions.push({
                 dest: `.claude/skills/${name}/SKILL.md`,
@@ -158,19 +191,21 @@ const buildWorkflowActions = (
             })
         }
         // design-system 스킬 하나가 ds-init·ds-add 두 흐름을 포함한다
-        const dsInit = parsed.get('ds-init')!
-        const dsAdd = parsed.get('ds-add')!
-        actions.push({
-            dest: '.claude/skills/design-system/SKILL.md',
-            content:
-                serializeFrontmatter({
-                    name: 'design-system',
-                    description:
-                        'Design system workflows: one-time Storybook setup (ds-init) and adding components before layout work (ds-add).',
-                }) +
-                `# Design System\n\n## Part 1 — ds-init (최초 1회 설정)\n\n${dsInit.body}\n\n---\n\n## Part 2 — ds-add (UI 작업마다)\n\n${dsAdd.body}`,
-            module: 'core',
-        })
+        if (hasDesignSystem) {
+            const dsInit = parsed.get('ds-init')!
+            const dsAdd = parsed.get('ds-add')!
+            actions.push({
+                dest: '.claude/skills/design-system/SKILL.md',
+                content:
+                    serializeFrontmatter({
+                        name: 'design-system',
+                        description:
+                            'Design system workflows: one-time Storybook setup (ds-init) and adding components before layout work (ds-add).',
+                    }) +
+                    `# Design System\n\n## Part 1 — ds-init (최초 1회 설정)\n\n${dsInit.body}\n\n---\n\n## Part 2 — ds-add (UI 작업마다)\n\n${dsAdd.body}`,
+                module: 'core',
+            })
+        }
     }
 
     return actions
@@ -232,6 +267,7 @@ const buildDocActions = (vars: Record<string, string>): IFileAction[] => [
 ]
 
 const buildModuleActions = (
+    detected: IDetectResult,
     options: IScaffoldOptions,
     vars: Record<string, string>,
 ): IFileAction[] => {
@@ -239,6 +275,14 @@ const buildModuleActions = (
     const preset = `presets/${options.preset}`
 
     if (options.modules.includes('design-system')) {
+        if (hasStylelintBaseline(detected, options)) {
+            actions.push({
+                dest: '.harness/stylelint-baseline.json',
+                content:
+                    JSON.stringify(detected.cssFilesWithRawColor, null, 4) + '\n',
+                module: 'design-system',
+            })
+        }
         actions.push(
             {
                 dest: 'src/design-system/tokens.css',
@@ -386,7 +430,7 @@ export const buildPlan = (
         ...buildWorkflowActions(options, vars),
         ...buildGateActions(options, vars),
         ...buildDocActions(vars),
-        ...buildModuleActions(options, vars),
+        ...buildModuleActions(detected, options, vars),
     ]
 
     if (options.agents.includes('claude')) {

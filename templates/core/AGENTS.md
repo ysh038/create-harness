@@ -29,8 +29,9 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `/impl <slug>` | 명세 기반 구현 — 실패하는 테스트 먼저 (Red → Green → Refactor) |
 | `/verify` | checks 순차 실행, 실패 시 수정 루프 |
 | `/ship` | 검증 → 커밋 → `docs/task-log.md` 기록 |
-| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
+{{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
 | `/ds-add` | 레이아웃 착수 전 디자인시스템 컴포넌트 + 스토리 선행 추가 |
+{{/if}}
 
 ## 절대 금지
 
@@ -41,8 +42,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `git push --force` (보호 브랜치) | 이력 파괴. 필요하면 `--force-with-lease` + 사전 협의 |
 | `.env*` 파일 커밋 | 시크릿 유출 |
 | 라우트(페이지) 컴포넌트에 비즈니스 로직 | hooks/queries 레이어로 내린다 (`{{RULES_DIR}}/10-architecture` 참고) |
-| CSS 색상 원시값 (`#hex`, `rgb()`) | 디자인 토큰만 사용. stylelint가 error 처리 |
-| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
+{{#if DESIGN_SYSTEM}}| CSS 색상 원시값 (`#hex`, `rgb()`) | 디자인 토큰만 사용. stylelint가 error 처리 |
+{{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
 ## 장기 기억 문서
 

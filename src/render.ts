@@ -10,12 +10,29 @@ import { fileURLToPath } from 'node:url'
 export const getTemplatesRoot = (): string =>
     path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates')
 
+/**
+ * `{{#if FLAG}}...{{/if}}` 블록. 플래그가 'true' 가 아니면 블록 전체를 지운다.
+ * 모듈을 빼면 그 모듈을 참조하는 규칙 문장도 같이 빠져야 하기 때문에 필요하다
+ * (존재하지 않는 파일을 가리키는 규칙은 에이전트를 헷갈리게 한다).
+ * 블록이 줄 전체를 차지하면 남는 빈 줄까지 함께 제거한다.
+ */
+const applyConditionals = (
+    content: string,
+    vars: Record<string, string>,
+): string =>
+    content.replace(
+        /[ \t]*\{\{#if ([A-Z0-9_]+)\}\}\n?([\s\S]*?)[ \t]*\{\{\/if\}\}\n?/g,
+        (_match, key: string, block: string) =>
+            vars[key] === 'true' ? block : '',
+    )
+
 export const renderString = (
     content: string,
     vars: Record<string, string>,
 ): string =>
-    content.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match, key: string) =>
-        key in vars ? vars[key] : match,
+    applyConditionals(content, vars).replace(
+        /\{\{([A-Z0-9_]+)\}\}/g,
+        (match, key: string) => (key in vars ? vars[key] : match),
     )
 
 /** templates/ 기준 상대 경로의 템플릿을 읽어 변수 치환까지 마친 문자열을 돌려준다 */

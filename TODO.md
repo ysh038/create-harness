@@ -22,6 +22,12 @@
 
 ## v0.2
 
+- [x] 감지 결과로 모듈 기본 선택값 결정 (`suggest.ts`) — 설치 직후 컴파일·통과하는 모듈만 기본 ON, 제외 이유를 항상 출력
+- [x] 모듈 미선택 시 그 모듈을 전제하는 규칙·워크플로도 제외 (렌더러 `{{#if}}` 블록 + `RULE_MODULE_REQUIREMENT`)
+- [x] 하네스 입장 명시 — design-system 권장 / Tailwind 비권장 (CLI 권고 출력 + README)
+- [x] eslint `.harness/**` ignores 자동 패치 (`eslintPatch.ts`, 멱등·미인식 시 조각만 출력)
+- [x] 브라운필드 stylelint 유예 — `.harness/stylelint-baseline.json` 파일 단위 override (새 파일은 error 유지)
+- [x] `rgb()`·`hsl()` 이 토큰 강제를 빠져나가던 문제 수정 (`ignoreFunctions` 기본값)
 - [ ] `create-harness update` — manifest 해시로 로컬 수정을 구분하는 3-way 병합
 - [ ] `.claude-plugin/marketplace.json` — Claude Code 플러그인 배포 채널
 - [ ] self-hosting: create-harness를 자기 저장소에 적용 (dogfooding)
@@ -35,3 +41,8 @@
 ## 논의 필요
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)
+
+- 유예 목록이 오래 방치되지 않게 하는 장치 — 예: `/verify` 가 남은 baseline 개수를
+  같이 출력하거나, 유예 파일을 수정하면서 원시값을 남기면 경고
+- Tailwind 프로젝트를 위한 최소한의 강제 수단 — 현재는 그냥 비권장으로 두고 있다.
+  임의값(`bg-[#hex]`) 차단 ESLint 규칙만 별도 모듈로 떼는 안은 검토 가치가 있다
