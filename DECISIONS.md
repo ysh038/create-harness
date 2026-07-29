@@ -63,3 +63,20 @@ hex 원시값보다 나쁜 결과다. v0.1은 색상만 error로 켜고 간격·
 2. 이름 분리 — 루트 대문자 vs `templates/core/docs/` 소문자
 3. `package.json` `files: ["dist", "templates"]` 화이트리스트 — tarball에서 자동 제외
 4. `npm pack --dry-run` 결과에 `TODO.md`·`DECISIONS.md`가 있으면 실패하는 vitest 테스트
+
+## 7. 생성 파일은 호스트 프로젝트의 도구에 안 걸리게 만든다 (E2E에서 배움)
+
+hrd-aimon-fe 사본에 실제 적용해 보니, 생성 파일이 **대상 프로젝트 자신의 eslint·tsc에
+걸리는** 문제가 세 갈래로 나왔다. 모두 "생성물은 호스트 도구의 수집 범위를 침범하지
+않아야 한다"는 하나의 원칙으로 정리된다.
+
+- **충돌 파일은 `.incoming` 접미사**: `.harness/incoming/foo.ts` 는 호스트의
+  타입 인식 린트(parserOptions.project)에서 "tsconfig 밖 파일" 파싱 에러를 낸다.
+  `foo.ts.incoming` 으로 저장하면 어떤 도구도 집어들지 않는다.
+- **게이트 스크립트(.mjs)는 파일 단위 eslint-disable**: 브라우저 전용 eslint 설정이
+  `process`·`console` 을 no-undef로 잡는다. Node 인프라 스크립트임을 헤더로 명시.
+- **스토리 템플릿은 `_story-template.tsx`**: `_template.stories.tsx` 로 두면 Storybook
+  테스트 러너의 `*.stories.*` glob이 참고용 템플릿을 실제 실행하려다 깨진다.
+  파일명에서 `.stories.` 를 빼는 것이 유일하게 안전하다.
+- Storybook 설치 산출물(`.storybook/`, `vitest.shims.d.ts`, 예제 `src/stories/`)의
+  린트 정합은 `/ds-init` 워크플로의 명시적 단계로 편입했다.

@@ -1,0 +1,10 @@
+{
+    "version": 1,
+    "hooks": {
+        "beforeShellExecution": [
+            {
+                "command": "./.harness/gates/pre-commit-gate.sh cursor"
+            }
+        ]
+    }
+}

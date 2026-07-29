@@ -6,17 +6,19 @@
 
 ## v0.1
 
-- [ ] CLI 스켈레톤 (bin·detect·prompts·render·manifest·registry, `--dry-run`)
-- [ ] 컨벤션 정본 → `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*.mdc` fan-out
-- [ ] 참조 구현 (axios 인터셉터 + refreshPromise·ProtectedRoute·queries 3계층·IApiResponse·Zustand 모달 스토어)
-- [ ] 린트 강제 (naming-convention·import/order·no-restricted-paths·tsconfig strict·commitlint)
-- [ ] `.harness/config.json` checks 목록 + 순차 러너 (레벨 개념 없음)
-- [ ] 커밋 게이트 — 단일 `pre-commit-gate.sh`를 Cursor `beforeShellExecution` + Claude `PreToolUse` 양쪽에 연결
-- [ ] 워크플로 6종 (spec / impl / verify / ship / ds-init / ds-add) fan-out
-- [ ] 디자인시스템 (규칙 mdc·tokens 스켈레톤·stylelint 색상만 error·스토리 템플릿, Storybook은 `/ds-init` 온디맨드)
-- [ ] 생성 문서 스켈레톤 (docs/architecture·decisions·product-spec·task-log + specs/_template)
-- [ ] manifest(sha256)·충돌 처리 (`.harness/incoming/`)
-- [ ] 실사용 검증 (hrd-aimon-fe 사본) + 트리 스냅샷 테스트 + `npm pack` 누출 검증 테스트 + README
+- [x] CLI 스켈레톤 (bin·detect·prompts·render·manifest·registry, `--dry-run`)
+- [x] 컨벤션 정본 → `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*.mdc` fan-out
+- [x] 참조 구현 (axios 인터셉터 + refreshPromise·ProtectedRoute·queries 3계층·IApiResponse·Zustand 모달 스토어)
+- [x] 린트 강제 (naming-convention·import/order·공개 API 경계·commitlint)
+- [x] `.harness/config.json` checks 목록 + 순차 러너 (레벨 개념 없음)
+- [x] 커밋 게이트 — 단일 `pre-commit-gate.sh`를 Cursor `beforeShellExecution` + Claude `PreToolUse` 양쪽에 연결
+- [x] 워크플로 6종 (spec / impl / verify / ship / ds-init / ds-add) fan-out
+- [x] 디자인시스템 (규칙 mdc·tokens 스켈레톤·stylelint 색상만 error·스토리 템플릿, Storybook은 `/ds-init` 온디맨드)
+- [x] 생성 문서 스켈레톤 (docs/architecture·decisions·product-spec·task-log + specs/_template)
+- [x] manifest(sha256)·충돌 처리 (`.harness/incoming/*.incoming`)
+- [x] 실사용 검증 (hrd-aimon-fe 사본: checks 5종 통과·게이트 deny/allow·/ds-init Storybook 설치·a11y=error 실패 판정) + 트리 스냅샷 테스트 + `npm pack` 누출 검증 테스트 + README
+- [ ] Cursor·Claude 실제 세션에서 규칙·커맨드·훅 로드를 눈으로 확인 (프로그램 검증 불가 항목)
+- [ ] npm 배포 (`npm publish`) — 배포 전 `npm pack` 산출물 최종 검토
 
 ## v0.2
 

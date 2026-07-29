@@ -1,0 +1,48 @@
+{
+    "name": "create-harness",
+    "version": "0.1.0",
+    "description": "Scaffold AI coding agent harness (conventions, verification gates, workflows) onto an existing project — for Cursor and Claude Code.",
+    "type": "module",
+    "bin": {
+        "create-harness": "./dist/cli.js"
+    },
+    "files": [
+        "dist",
+        "templates"
+    ],
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "dev": "tsx src/cli.ts",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "test": "vitest run",
+        "check": "npm run typecheck && npm run build && npm run test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ysh038/create-harness.git"
+    },
+    "keywords": [
+        "ai",
+        "agent",
+        "harness",
+        "scaffold",
+        "cursor",
+        "claude-code",
+        "agents-md",
+        "cli"
+    ],
+    "license": "MIT",
+    "dependencies": {
+        "@clack/prompts": "^1.7.0",
+        "picocolors": "^1.1.1"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.2",
+        "tsx": "^4.23.1",
+        "typescript": "^7.0.2",
+        "vitest": "^3.2.7"
+    }
+}

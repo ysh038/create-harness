@@ -1,0 +1,57 @@
+/**
+ * 디자인 토큰 정본 — 색상은 반드시 이 변수들만 사용한다 (stylelint가 원시값을 error 처리).
+ * 존재하지 않는 토큰 이름을 발명하지 말 것. 필요하면 여기와 tokens.ts 양쪽에 먼저 추가한다.
+ *
+ * TODO: 아래 중립 회색 기본값을 프로젝트 브랜드 값으로 교체하세요.
+ */
+:root {
+    /* ===== 색상 (stylelint 강제 대상) ===== */
+    /* 브랜드 */
+    --color-primary: #4f46e5; /* TODO: 브랜드 주 색상 */
+    --color-primary-hover: #4338ca;
+    --color-secondary: #64748b;
+
+    /* 표면·배경 */
+    --color-background: #ffffff;
+    --color-surface: #f8fafc;
+    --color-border: #e2e8f0;
+
+    /* 텍스트 */
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-text-inverse: #ffffff;
+
+    /* 상태 */
+    --color-success: #16a34a;
+    --color-warning: #d97706;
+    --color-error: #dc2626;
+    --color-info: #0284c7;
+
+    /* ===== 간격 (v0.1은 강제 안 함 — 토큰이 채워지면 stylelint.config.js 에서 켤 것) ===== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* ===== radius ===== */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+
+    /* ===== shadow ===== */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.1);
+
+    /* ===== 타이포 (v0.1은 강제 안 함) ===== */
+    --font-size-sm: 12px;
+    --font-size-base: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+}
