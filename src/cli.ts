@@ -76,7 +76,7 @@ const main = async (): Promise<void> => {
         return
     }
     if (values.help) {
-        console.log(`사용법: npx create-harness [대상 디렉터리] [옵션]
+        console.log(`사용법: npx create-harness-cli [대상 디렉터리] [옵션]
 
 옵션:
   --preset <name>     프리셋 (기본: react-fe)

@@ -170,3 +170,20 @@ Claude Code는 `/plugin marketplace add` · `/plugin install`이 살아있는 �
 `export default tseslint.config(`, `export default defineConfig([` 세 형태만 인식하고,
 이미 있으면 아무것도 하지 않으며(멱등), 알아보지 못하면 파일을 건드리지 않고 조각만
 출력한다. 무엇을 넣었는지는 항상 stdout에 찍어 git diff로 확인할 수 있게 한다.
+
+## 13. npm 배포명은 `create-harness-cli`, 브랜드명은 `create-harness` 유지
+
+npm 배포를 준비하며 `npm view create-harness`로 확인해보니 이름이 이미 선점돼 있었다 —
+`uiharness`(philcockfield/uiharness, 1년 이상 전 배포)라는 완전히 무관한 프로젝트다.
+`package.json`의 `name`이 여전히 `create-harness`인 상태로 README의 `npx create-harness`를
+그대로 뒀다면, 그 명령은 이 프로젝트가 아니라 그 무관한 패키지를 실행했을 것이다.
+
+저장소명·CLI 브랜드(`p.intro('create-harness')`, 도움말 문구, 각 md 문서 제목)는
+`create-harness`를 유지하고, npm에 실제로 등록되는 `package.json`의 `name`과
+`bin` 키만 `create-harness-cli`로 바꿨다. 저장소 이름까지 바꾸는 것은 더 큰 파급(README
+링크·git remote·기존 clone)이 있어 배제했다 — npm 패키지명과 GitHub 저장소명은
+독립적이라 이걸로 충분하다.
+
+후보로 `create-ai-harness`·`create-agent-harness`·`harness-init`도 검토했으나 이미
+사용 중이었다(`npm view <name>`으로 확인). `create-harness-cli`가 원래 이름에 가장
+가깝고 비어 있어 채택했다.

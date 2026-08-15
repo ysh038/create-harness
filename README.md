@@ -5,9 +5,12 @@
 `create-harness`는 앱을 새로 만드는 스캐폴더가 아니라, **이미 있는 프로젝트**에
 AI 에이전트(Cursor, Claude Code)가 일관된 결과물을 내도록 하는 하네스를 설치하는 CLI다.
 
+> npm의 `create-harness` 이름은 무관한 다른 패키지가 선점하고 있어, 배포명은
+> `create-harness-cli`다. 저장소·CLI 브랜드명은 그대로 `create-harness`를 쓴다.
+
 ```bash
-npx create-harness            # 현재 디렉터리에
-npx create-harness ./my-app --yes --dry-run   # 계획만 확인
+npx create-harness-cli            # 현재 디렉터리에
+npx create-harness-cli ./my-app --yes --dry-run   # 계획만 확인
 ```
 
 ## 무엇이 생기나
@@ -34,7 +37,7 @@ npx create-harness ./my-app --yes --dry-run   # 계획만 확인
 ## 옵션
 
 ```
-npx create-harness [대상 디렉터리] [옵션]
+npx create-harness-cli [대상 디렉터리] [옵션]
 
 --preset <name>     프리셋 (v0.1: react-fe)
 --agents <csv>      cursor,claude (기본: 둘 다)

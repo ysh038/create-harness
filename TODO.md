@@ -18,6 +18,9 @@
 - [x] manifest(sha256)·충돌 처리 (`.harness/incoming/*.incoming`)
 - [x] 실사용 검증 (hrd-aimon-fe 사본: checks 5종 통과·게이트 deny/allow·/ds-init Storybook 설치·a11y=error 실패 판정) + 트리 스냅샷 테스트 + `npm pack` 누출 검증 테스트 + README
 - [ ] Cursor·Claude 실제 세션에서 규칙·커맨드·훅 로드를 눈으로 확인 (프로그램 검증 불가 항목)
+- [x] npm 이름 충돌 발견 및 해결 — `create-harness`는 무관한 기존 패키지(uiharness)가
+  선점 중이라 `npx create-harness`가 그 패키지를 실행하고 있었다. `create-harness-cli`로
+  개명 (`package.json` name·bin, `src/cli.ts` 도움말, README). 근거: `DECISIONS.md` #13
 - [ ] npm 배포 (`npm publish`) — 배포 전 `npm pack` 산출물 최종 검토
 
 ## v0.2
