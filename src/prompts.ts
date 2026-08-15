@@ -97,5 +97,21 @@ export const runPrompts = async (
         process.exit(1)
     }
 
-    return { ...defaults, agents, modules }
+    p.log.info(
+        [
+            'ponytail — 이 하네스와 무관한 서드파티 규칙(YAGNI 사다리, 최소 구현 강제).',
+            'Cursor: 최신 릴리스에서 규칙 파일을 받아 자동 설치합니다.',
+            'Claude Code: 플러그인 설치 명령 두 줄을 마지막에 안내합니다 (직접 실행 필요).',
+        ].join('\n'),
+    )
+    const ponytail = await p.confirm({
+        message: 'ponytail도 함께 설정할까요?',
+        initialValue: defaults.ponytail,
+    })
+    if (p.isCancel(ponytail)) {
+        p.cancel('취소되었습니다.')
+        process.exit(1)
+    }
+
+    return { ...defaults, agents, modules, ponytail }
 }

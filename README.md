@@ -39,6 +39,7 @@ npx create-harness [대상 디렉터리] [옵션]
 --preset <name>     프리셋 (v0.1: react-fe)
 --agents <csv>      cursor,claude (기본: 둘 다)
 --modules <csv>     design-system,auth-http,data-fetching,lint (기본: 감지 결과에 따름)
+--ponytail          서드파티 ponytail 규칙(YAGNI 사다리) 연동 (기본: 끔)
 --dry-run           파일을 쓰지 않고 계획만 출력
 -y, --yes           질문 없이 진행
 ```
@@ -111,7 +112,22 @@ UI 작업이 없는 저장소에 Playwright 바이너리까지 끌고 들어오�
 필요해진 시점에 공식 CLI로 설치하고, a11y 위반을 검증 실패(`a11y.test = 'error'`)로
 등록한다. 자세한 근거는 `DECISIONS.md`.
 
-## 개발
+## ponytail 연동 (`--ponytail`)
+
+[ponytail](https://github.com/DietrichGebert/ponytail)은 이 하네스와 무관한 서드파티
+규칙으로, "YAGNI 사다리"를 강제해 에이전트가 과설계하지 않고 최소 구현을 하도록 만든다.
+`--ponytail`(또는 대화형 확인)을 켜면:
+
+- **Cursor**: 최신 GitHub 릴리스 태그에서 `.cursor/rules/ponytail.mdc` 를 실행 시점에
+  받아와 자동 설치한다. `templates/` 에 벤더링하지 않는다 — 릴리스 태그가 아니라
+  `main` 브랜치를 그대로 받으면 재실행마다 결과가 달라져 이 CLI의 멱등성 원칙과
+  어긋나고, 손으로 복사해 두면 ponytail 쪽 업데이트를 우리가 계속 따라가야 한다.
+  네트워크·API 실패 시에는 파일을 건너뛰고 수동 설치 안내로 폴백한다(스캐폴딩 전체를
+  막지 않는다).
+- **Claude Code**: `/plugin` 설치는 살아있는 세션 안에서만 실행되는 명령이라 이 CLI가
+  대신 실행할 수 없다. 대신 두 줄짜리 설치 명령을 "다음 단계" 맨 위에 출력한다.
+
+## Storybook은 왜 미리 설치하지 않나
 
 ```bash
 npm run check   # typecheck → build → test

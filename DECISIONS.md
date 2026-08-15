@@ -141,7 +141,27 @@ hrd-aimon-fe에 얹었을 때 색상 원시값 637건이 한 번에 막혔다. �
 실제 강제가 달랐다. 색상 속성에 한해 `declaration-property-value-disallowed-list` 로
 따로 막았다 (background-image 그라디언트의 var() 조합은 그대로 허용된다).
 
-## 11. eslint ignores는 안내가 아니라 패치한다
+## 11. ponytail은 벤더링하지 않고 실행 시점에 릴리스 태그에서 받는다
+
+[ponytail](https://github.com/DietrichGebert/ponytail)(YAGNI 사다리를 강제하는 서드파티
+규칙)을 `--ponytail`로 연동하기로 하면서, "손으로 복사해 둔 산출물은 원본이 바뀌면
+낡는다"는 2번 결정(Storybook)과 같은 문제를 다시 만났다. 다만 원인은 다르다 — Storybook은
+*프로젝트 조합마다 정답이 달라지는 산출물*이 문제였고, ponytail은 *우리가 저작하지 않은
+콘텐츠를 계속 동기화해야 하는* 문제다.
+
+그래서 `templates/`에 넣지 않고, 스캐폴딩 시점에 GitHub Releases API로 최신 릴리스
+태그를 찾은 뒤 그 태그에서 `.cursor/rules/ponytail.mdc` 원문을 받아온다(`src/ponytail.ts`).
+`main` 브랜치를 그대로 받는 방안은 버리고 태그에 고정했다 — `main`을 받으면 같은 옵션으로
+재실행해도 매번 다른 내용이 나와, 파일 재실행 시 동일 내용이면 건너뛰는 멱등성 전제와
+충돌한다(2번 결정 참고). 네트워크·API 실패는 조용히 흡수하고 수동 설치 안내로
+폴백한다 — 서드파티 저장소 상태가 이 CLI의 스캐폴딩 성공 여부를 좌우해서는 안 된다.
+
+Claude Code는 `/plugin marketplace add` · `/plugin install`이 살아있는 세션 안에서만
+동작하는 명령이라 한 번 실행되고 끝나는 이 CLI가 대신 실행할 방법이 없다. 파일을
+자동 설치해줄 수 있는 Cursor와 달리, Claude Code는 두 줄짜리 명령을 "다음 단계"
+맨 앞에 출력하는 것이 구조적 상한선이다.
+
+## 12. eslint ignores는 안내가 아니라 패치한다
 
 `.harness/**` 를 호스트 eslint ignores에 넣는 일을 매번 사람이 손으로 했다. 안내문은
 읽히지 않고, 안 넣으면 게이트의 첫 lint 체크가 하네스 자기 파일 때문에 깨진다.

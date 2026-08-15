@@ -43,6 +43,7 @@ const fullOptions = (targetDir: string): IScaffoldOptions => ({
     preset: 'react-fe',
     agents: ['cursor', 'claude'],
     modules: ['design-system', 'auth-http', 'data-fetching', 'lint'],
+    ponytail: false,
     dryRun: false,
     yes: true,
     install: false,

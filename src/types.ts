@@ -54,6 +54,8 @@ export interface IScaffoldOptions {
     preset: 'react-fe'
     agents: TAgent[]
     modules: TModule[]
+    /** 서드파티 ponytail 규칙(YAGNI 사다리) 연동 여부 — 코어 4모듈과 별도 축이다 */
+    ponytail: boolean
     dryRun: boolean
     yes: boolean
     install: boolean

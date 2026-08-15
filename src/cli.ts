@@ -11,6 +11,7 @@ import { detect } from './detect.js'
 import { writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
 import { patchEslintIgnores } from './eslintPatch.js'
+import { buildPonytailAction } from './ponytail.js'
 import { buildPlan, hasStylelintBaseline, requiredDevDeps } from './registry.js'
 import { recommendedModules, suggestModules } from './suggest.js'
 import type { IScaffoldOptions, TAgent, TModule } from './types.js'
@@ -60,6 +61,7 @@ const main = async (): Promise<void> => {
             preset: { type: 'string', default: 'react-fe' },
             agents: { type: 'string' },
             modules: { type: 'string' },
+            ponytail: { type: 'boolean', default: false },
             'dry-run': { type: 'boolean', default: false },
             yes: { type: 'boolean', short: 'y', default: false },
             install: { type: 'boolean', default: false },
@@ -80,6 +82,7 @@ const main = async (): Promise<void> => {
   --preset <name>     프리셋 (기본: react-fe)
   --agents <csv>      cursor,claude (기본: 둘 다)
   --modules <csv>     design-system,auth-http,data-fetching,lint
+  --ponytail          서드파티 ponytail 규칙(YAGNI 사다리) 연동
   --dry-run           파일을 쓰지 않고 계획만 출력
   -y, --yes           질문 없이 기본값/옵션값으로 진행
   --install           필요한 devDependency 설치 명령까지 출력 후 실행 안내
@@ -116,6 +119,7 @@ const main = async (): Promise<void> => {
         ],
         // --modules 를 주지 않으면 감지 결과가 기본값을 정한다
         modules: explicitModules ?? recommendedModules(detected),
+        ponytail: values.ponytail ?? false,
         dryRun: values['dry-run'],
         yes: values.yes,
         install: values.install,
@@ -162,6 +166,19 @@ const main = async (): Promise<void> => {
     }
 
     const plan = buildPlan(detected, options)
+
+    let ponytailTag: string | null = null
+    let ponytailFetchFailed = false
+    if (options.ponytail && options.agents.includes('cursor')) {
+        const fetched = await buildPonytailAction()
+        if (fetched) {
+            plan.push(fetched.action)
+            ponytailTag = fetched.tag
+        } else {
+            ponytailFetchFailed = true
+        }
+    }
+
     const results = writeActions(plan, targetDir, options.dryRun)
     writeManifest(results, options, getOwnVersion(), options.dryRun)
 
@@ -212,6 +229,19 @@ const main = async (): Promise<void> => {
         )
     }
 
+    if (ponytailTag) {
+        console.log(
+            `\n${pc.green('ponytail')} — Cursor 규칙을 릴리스 ${ponytailTag}에서 받아 설치했습니다 (.cursor/rules/ponytail.mdc).`,
+        )
+    } else if (ponytailFetchFailed) {
+        console.log(
+            `\n${pc.yellow('ponytail')} — 규칙 파일을 받아오지 못했습니다 (네트워크를 확인하세요).\n` +
+                pc.dim(
+                    '  수동 설치: https://github.com/DietrichGebert/ponytail 의 .cursor/rules/ponytail.mdc 를 프로젝트에 복사하세요.',
+                ),
+        )
+    }
+
     const deps = requiredDevDeps(options)
     if (deps.length > 0) {
         console.log(
@@ -227,6 +257,13 @@ const main = async (): Promise<void> => {
     ]
     if (options.modules.includes('design-system')) {
         steps.push('UI 작업 전이라면 /ds-init 워크플로로 Storybook을 설치하세요')
+    }
+    if (options.ponytail && options.agents.includes('claude')) {
+        steps.unshift(
+            'ponytail(Claude Code) 설치 — 아래 두 명령을 각각 별도 메시지로 보내세요:\n' +
+                '     /plugin marketplace add DietrichGebert/ponytail\n' +
+                '     /plugin install ponytail@ponytail',
+        )
     }
     console.log(
         `\n다음 단계:\n` +
