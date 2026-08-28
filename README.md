@@ -31,8 +31,9 @@ npx create-harness-cli ./my-app --yes --dry-run   # 계획만 확인
 - 커밋 게이트 — 같은 스크립트 하나를 Cursor(`beforeShellExecution`)와
   Claude Code(`PreToolUse`) 양쪽에 연결. checks 실패·`.env` 스테이징·force push 시 커밋 거부
 - 워크플로 6종 — `/spec`(명세) → `/impl`(테스트 우선 구현) → `/verify` → `/ship`,
-  UI 작업은 `/ds-init`(Storybook 온디맨드 설치)·`/ds-add`(레이아웃 전 컴포넌트 선행)
-- 린트 강제 — 명명 규칙(`I` 접두 등)·공개 API 경계·색상 원시값 차단(stylelint)을 error 처리
+  UI 작업은 `/ds-init`(Storybook 온디맨드 설치)·`/ds-add`(페이지 전 Atomic 계층 선행)
+- 린트 강제 — 명명 규칙(`I` 접두 등)·공개 API 경계·Atomic 계층 역방향 import·
+  색상 원시값 차단(stylelint)을 error 처리
 
 ## 옵션
 
@@ -73,6 +74,28 @@ npx create-harness-cli [대상 디렉터리] [옵션]
 `design-system` 모듈은 웬만하면 켜는 것을 권장합니다. AI 에이전트가 화면마다 다른
 색·간격을 쓰는 UI 드리프트를 막는 **결정적**(deterministic) 수단이 토큰 + stylelint
 하나뿐이기 때문입니다. 규칙 문서는 확률적으로만 지켜집니다.
+
+### UI는 Atomic 계층으로 쌓는다
+
+에이전트에게 "로그인 페이지 만들어줘"라고 하면 페이지 파일 하나에 마크업과 스타일을
+전부 쏟아붓습니다. 다음 화면에서도 같은 일이 반복되고, 버튼이 화면 수만큼 생깁니다.
+
+그래서 `/ds-add` 는 **화면 분해를 먼저 강제합니다** — atom → molecule → organism 순으로
+컴포넌트와 스토리를 만들고, 페이지는 마지막에 훅 호출 + 조립만 남깁니다.
+
+```
+src/design-system/atoms/       도메인 모름. 토큰만 (Button, Input, Badge)
+src/design-system/molecules/   atom 2~3개 조합 (FormField, SearchBar)
+src/design-system/organisms/   의미 있는 UI 블록 (범용)
+src/components/{Domain}/       도메인 타입을 받는 organism
+src/components/layouts/        template — 슬롯 레이아웃
+라우트 파일                     page — 조립만
+```
+
+경계는 두 개뿐입니다. **도메인 타입이 들어오면 `design-system/` 을 떠난다**,
+**데이터를 가져오면 컴포넌트가 아니라 page/hook이다.** 이 규칙은 문서로만 두면
+지켜지지 않으므로 `lint` 모듈의 ESLint 조각이 계층 역방향 import를 error로 끊습니다
+(atom → molecule, molecule → organism, design-system → queries/stores).
 
 같은 이유로 이 하네스는 **Tailwind 를 권장하지 않습니다.** 값이 클래스 문자열 안에
 있어 stylelint 가 닿지 못하고, 임의값(`bg-[#3b82f6]`)을 막으려면 별도의 ESLint 규칙

@@ -200,7 +200,7 @@ const buildWorkflowActions = (
                     serializeFrontmatter({
                         name: 'design-system',
                         description:
-                            'Design system workflows: one-time Storybook setup (ds-init) and adding components before layout work (ds-add).',
+                            'Design system workflows: one-time Storybook setup (ds-init) and building Atomic-layer components (atom/molecule/organism) before writing a page (ds-add).',
                     }) +
                     `# Design System\n\n## Part 1 — ds-init (최초 1회 설정)\n\n${dsInit.body}\n\n---\n\n## Part 2 — ds-add (UI 작업마다)\n\n${dsAdd.body}`,
                 module: 'core',

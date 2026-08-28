@@ -187,3 +187,42 @@ npm 배포를 준비하며 `npm view create-harness`로 확인해보니 이름�
 후보로 `create-ai-harness`·`create-agent-harness`·`harness-init`도 검토했으나 이미
 사용 중이었다(`npm view <name>`으로 확인). `create-harness-cli`가 원래 이름에 가장
 가깝고 비어 있어 채택했다.
+
+## 14. UI 규칙을 "레이아웃 전 컴포넌트"에서 Atomic 계층으로 바꾼다
+
+기존 30-design-system은 `src/design-system/components/` 라는 평면 폴더에 "레이아웃보다
+컴포넌트를 먼저 만들라"는 **순서**만 규정했다. 실제로 에이전트에게 화면을 시키면 이
+규칙은 절반만 지켜진다 — 컴포넌트를 하나 만들고 나머지는 페이지 파일에 그대로 쏟는다.
+"컴포넌트"의 크기가 정의되지 않으면 페이지 전체를 컴포넌트 하나라고 불러도 규칙 위반이
+아니기 때문이다.
+
+Atomic 계층은 그 크기에 **이름과 폴더**를 준다. atom → molecule → organism 순으로
+쌓게 하면 "어디까지 쪼갤 것인가"가 판단이 아니라 위치 문제가 되고, 판단이 위치가 되는
+순간 린트로 검사할 수 있다.
+
+계층 배치는 교과서의 5계층을 그대로 쓰지 않았다:
+
+- `design-system/{atoms,molecules,organisms}` 는 **도메인 비의존**만 담는다. 도메인 타입을
+  props로 받는 순간 기존 10-architecture의 `src/components/{Domain}/` 으로 간다.
+  두 규칙이 같은 자리를 두고 다투지 않게 하려면 경계가 "계층"이 아니라 "도메인 결합"이어야 한다.
+- `templates` 는 `src/components/layouts/`, `pages` 는 라우트 파일에 매핑한다.
+  design-system 안에 pages 폴더를 두면 라우트와 이중화된다.
+
+강제는 ESLint `no-restricted-imports` 의 계층별 블록으로 건다 (atom → molecule/organism,
+molecule → organism, design-system → components/queries/stores). 결정 2·4와 같은 이유다 —
+문서로만 있는 규칙은 확률적으로만 지켜진다. 다만 이 조각은 `lint` 모듈에 들어 있어
+`design-system` 만 켠 프로젝트에서는 문서 수준으로 남는다. 존재하지 않는 폴더를 가리키는
+패턴은 무해하므로 두 모듈을 묶지는 않았다.
+
+강제를 붙이며 배운 것 두 가지 (둘 다 처음엔 조용히 통과했다):
+
+1. `no-restricted-imports` 는 **작성된 import 문자열**을 매칭한다. 해석된 경로가 아니다.
+   `**/design-system/molecules/**` 로 썼더니 atom 내부의 `../../molecules/FormField` 가
+   통과했다 — 계층 내부에서는 경로에 `design-system/` 세그먼트가 없다. 계층 폴더 이름만으로
+   매칭한다(`**/molecules/**`).
+2. flat config 는 같은 규칙을 **병합하지 않고 마지막 정의로 대체한다.** 계층 블록이
+   `no-restricted-imports` 를 다시 쓰는 순간 base 블록의 공개 API 경계가 그 파일에서 사라졌다.
+   공통 패턴을 `PUBLIC_API_PATTERN` 상수로 빼서 계층 블록마다 함께 넣는다.
+
+두 결함 모두 "설정을 읽어보면 맞아 보이는" 형태였다. 위반 픽스처를 실제로 lint해서
+error 3건이 나오는 것을 확인하고 나서야 드러났다.

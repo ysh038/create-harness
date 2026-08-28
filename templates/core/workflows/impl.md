@@ -10,7 +10,8 @@ description: Implement from a spec, failing tests first (Red-Green-Refactor).
 
 1. **명세 읽기**: 수용 기준 목록을 확인한다. 모호하면 구현 전에 질문한다.
 2. **UI 작업인지 판단**: 새 화면·컴포넌트가 필요하면 먼저 디자인시스템 절차를 따른다:
-   - 필요한 컴포넌트가 `src/design-system/components/` 에 없으면 `/ds-add` 선행
+   - 화면을 Atomic 계층(atom → molecule → organism)으로 쪼개고, 없는 계층이 있으면 `/ds-add` 선행.
+     페이지 파일부터 쓰지 않는다 — 페이지는 조립의 결과다
    - Storybook 미설치 상태면 `/ds-init` 선행
 3. **Red**: 수용 기준 하나당 실패하는 테스트를 먼저 쓴다. 실행해서 **실패를 확인**한다.
    (실패를 확인하지 않은 테스트는 아무것도 검증하지 않는 테스트일 수 있다)

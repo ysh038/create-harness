@@ -80,6 +80,45 @@ describe('buildPlan', () => {
         expect(skill!.content).toContain('ds-add')
     })
 
+    it('디자인시스템 규칙·워크플로가 Atomic 계층을 명시한다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const rule = plan.find(
+            (action) => action.dest === '.cursor/rules/30-design-system.mdc',
+        )!
+        for (const layer of [
+            'src/design-system/atoms/',
+            'src/design-system/molecules/',
+            'src/design-system/organisms/',
+        ]) {
+            expect(rule.content, layer).toContain(layer)
+        }
+        const dsAdd = plan.find(
+            (action) => action.dest === '.cursor/commands/ds-add.md',
+        )!
+        expect(dsAdd.content).toContain('atom')
+        expect(dsAdd.content).toContain('molecule')
+        expect(dsAdd.content).toContain('organism')
+    })
+
+    it('lint 조각이 계층 역방향 import를 error로 끊는다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const eslint = plan.find(
+            (action) => action.dest === 'eslint.harness.config.js',
+        )!
+        // 계층마다 상위 계층·도메인·전역 상태 import 금지 블록이 걸린다
+        for (const layer of ['atoms', 'molecules', 'organisms']) {
+            expect(eslint.content, layer).toContain(`layerBoundary(
+        '${layer}'`)
+        }
+        expect(eslint.content).toContain("'**/molecules/**'")
+        expect(eslint.content).toContain("'**/organisms/**'")
+        // 계층 내부의 상대 import 는 design-system/ 세그먼트를 포함하지 않는다.
+        // 패턴에 그 세그먼트가 남아 있으면 정작 막아야 할 위반이 통과한다.
+        expect(eslint.content).not.toMatch(/'!?\*\*\/design-system\//)
+        // 계층 블록이 공개 API 경계를 덮어쓰지 않는다 (flat config 는 규칙을 병합하지 않는다)
+        expect(eslint.content).toContain('PUBLIC_API_PATTERN, { group: forbidden')
+    })
+
     it('cursor 미선택 시 규칙은 docs/conventions/ 로 간다', () => {
         const plan = buildPlan(fakeDetect(), {
             ...fullOptions('/tmp/fake'),

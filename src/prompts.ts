@@ -10,7 +10,7 @@ import type {
 
 const MODULE_LABELS: Record<TModule, string> = {
     'design-system':
-        '토큰 스켈레톤 + stylelint(색상 원시값 차단) + 스토리 템플릿',
+        '토큰 스켈레톤 + stylelint(색상 원시값 차단) + Atomic 계층 규칙 + 스토리 템플릿',
     'auth-http': 'axios 인터셉터(토큰 첨부·refresh·401) + ProtectedRoute',
     'data-fetching': 'queries 3계층 샘플 + IApiResponse + Zustand 스토어',
     lint: '명명 규칙·import 경계 ESLint 조각 + prettier + commitlint',

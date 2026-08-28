@@ -45,15 +45,38 @@ a11y: {
 { "id": "test-storybook", "command": "{{PM_EXEC}} vitest --project=storybook --run" }
 ```
 
-5. **참조 구현 생성**: `src/design-system/examples/` 아래에 이 프로젝트의 토큰과 컴포넌트만 쓰는
-   예제 3종을 만든다 — 폼(`ExampleForm`), 데이터 테이블(`ExampleTable`), 상세 페이지(`ExampleDetail`).
-   각각 스토리 포함. 이 예제들은 컴파일되는 코드이므로 API가 바뀌면 깨진다 —
+5. **계층 폴더 스켈레톤 생성**: Atomic 계층을 폴더로 고정한다
+   (계층 정의는 `{{RULES_DIR}}/30-design-system`).
+
+```
+src/design-system/atoms/
+src/design-system/molecules/
+src/design-system/organisms/
+src/components/layouts/        # template 계층
+```
+
+   Storybook 사이드바가 계층 순서대로 보이도록 `.storybook/preview.(ts|tsx)` 에
+   `options.storySort` 를 넣는다:
+
+```ts
+options: {
+    storySort: { order: ['Atoms', 'Molecules', 'Organisms', 'Layouts'] },
+},
+```
+
+6. **참조 구현 생성**: 위 폴더에 이 프로젝트의 토큰만 쓰는 **한 줄기의 계층 예제**를 만든다 —
+   `atoms/Button`, `molecules/FormField`(Button + 인풋 + 에러 메시지),
+   `organisms/ExampleForm`(FormField 조합), `layouts/ExampleLayout`(슬롯 레이아웃).
+   각각 스토리 포함, `title` 은 계층 그대로.
+   흩어진 예제 3종보다 **한 화면이 atom에서 organism까지 쌓이는 과정**을 보여주는 편이
+   모방 대상으로 낫다. 이 예제들은 컴파일되는 코드이므로 API가 바뀌면 깨진다 —
    그게 목적이다. 에이전트(자신 포함)가 산문 문서 대신 이 코드를 모방하게 된다.
-6. **확인**: `{{PM_RUN}} storybook` 으로 기동 확인 후,
+7. **확인**: `{{PM_RUN}} storybook` 으로 기동 확인 후,
    `node .harness/gates/run-checks.mjs` 전체 통과 확인.
+   계층 역방향 import가 lint error로 잡히는지 한 번 일부러 확인해 둔다.
 
 ## 완료 조건
 
-- `.storybook/` 존재, a11y test = 'error'
+- `.storybook/` 존재, a11y test = 'error', storySort 적용
 - checks에 storybook 테스트 등록
-- `src/design-system/examples/` 3종 + 스토리
+- `atoms` / `molecules` / `organisms` / `layouts` 폴더와 계층 예제 + 스토리

@@ -31,6 +31,9 @@
 - [x] eslint `.harness/**` ignores 자동 패치 (`eslintPatch.ts`, 멱등·미인식 시 조각만 출력)
 - [x] 브라운필드 stylelint 유예 — `.harness/stylelint-baseline.json` 파일 단위 override (새 파일은 error 유지)
 - [x] `rgb()`·`hsl()` 이 토큰 강제를 빠져나가던 문제 수정 (`ignoreFunctions` 기본값)
+- [x] UI 규칙을 Atomic 계층으로 전환 — `design-system/{atoms,molecules,organisms}` + 도메인 결합 시
+      `components/{Domain}` 으로 분리, `/ds-add` 가 화면 분해를 선행 강제, 계층 역방향 import를
+      ESLint error로 차단 (위반 픽스처 lint로 검증 — DECISIONS #14)
 - [ ] `create-harness update` — manifest 해시로 로컬 수정을 구분하는 3-way 병합
 - [ ] `.claude-plugin/marketplace.json` — Claude Code 플러그인 배포 채널
 - [ ] self-hosting: create-harness를 자기 저장소에 적용 (dogfooding)

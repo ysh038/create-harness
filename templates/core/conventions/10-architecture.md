@@ -9,7 +9,7 @@ alwaysApply: false
 ## 레이어 (위에서 아래로만 의존)
 
 ```
-routes / components   ← 페이지·UI. 조립만 한다
+routes / components   ← 페이지·UI. 조립만 한다 (내부는 Atomic 계층 — 30-design-system)
    ↓
 hooks                 ← 화면 상태·데이터 오케스트레이션 (커스텀 훅)
    ↓
@@ -52,3 +52,19 @@ import { fetchExampleList } from '../../queries/Example/exampleApi'
 - 도메인별 하위 폴더: `components/Chat/`, `hooks/chat/`, `queries/Chat/`
 - 공용은 `shared/`: `components/shared/`, `hooks/shared/`, `stores/shared/`
 - 스타일은 컴포넌트 옆 `*.module.css` (CSS Modules)
+
+### UI 계층 (Atomic)
+
+`components` 레이어 안쪽은 Atomic 계층으로 다시 나뉜다. 상세 규칙·경계는
+`30-design-system` 에 있고, 위치만 요약하면:
+
+| 계층 | 위치 | 도메인 |
+|------|------|--------|
+| atom / molecule / 범용 organism | `src/design-system/{atoms,molecules,organisms}/` | 없음 |
+| 도메인 organism | `src/components/{Domain}/` | 있음 |
+| template(레이아웃) | `src/components/layouts/` | 없음 |
+| page | 라우트 파일 | 있음 (훅 호출) |
+
+- 계층은 아래에서 위로만 의존한다. atom이 molecule을 import하면 ESLint error다.
+- 도메인 타입을 props로 받는 순간 `design-system/` 을 떠난다 —
+  `design-system/` 안의 코드는 도메인 타입을 몰라야 한다.

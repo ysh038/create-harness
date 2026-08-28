@@ -10,6 +10,46 @@
 import importPlugin from 'eslint-plugin-import'
 import tseslint from 'typescript-eslint'
 
+/**
+ * 주의 — no-restricted-imports 는 **작성된 import 문자열**을 매칭한다 (해석된 경로가 아니다).
+ * design-system 내부에서 옆 계층을 부를 때 경로는 `../../molecules/FormField` 이지
+ * `.../design-system/molecules/...` 가 아니다. 패턴에 `design-system/` 을 넣으면
+ * 정작 막아야 할 계층 내부 위반이 통과한다 — 계층 폴더 이름만으로 매칭한다.
+ */
+
+/**
+ * 공개 API 경계 (10-architecture) — 기능 폴더는 index.ts 로만 import한다.
+ * 아래 Atomic 계층 블록들이 no-restricted-imports 를 재정의하면서
+ * 이 패턴을 덮어쓰지 않도록 상수로 빼서 매번 함께 넣는다
+ * (flat config 는 같은 규칙을 병합하지 않고 마지막 정의로 대체한다).
+ */
+const PUBLIC_API_PATTERN = {
+    group: [
+        '**/queries/*/*',
+        '!**/queries/*/index',
+        '**/components/*/*/*',
+        // <계층>/<Name>/<file> deep import (30-design-system)
+        '**/atoms/*/*',
+        '!**/atoms/*/index',
+        '**/molecules/*/*',
+        '!**/molecules/*/index',
+        '**/organisms/*/*',
+        '!**/organisms/*/index',
+    ],
+    message: '기능 폴더는 index.ts 공개 API로만 import하세요 (10-architecture).',
+}
+
+/** 상위 계층·도메인·전역 상태 차단 블록 하나를 만든다 (30-design-system) */
+const layerBoundary = (layer, forbidden, message) => ({
+    files: [`src/design-system/${layer}/**/*.{ts,tsx}`],
+    rules: {
+        'no-restricted-imports': [
+            'error',
+            { patterns: [PUBLIC_API_PATTERN, { group: forbidden, message }] },
+        ],
+    },
+})
+
 export default [
     {
         files: ['src/**/*.{ts,tsx}'],
@@ -57,24 +97,8 @@ export default [
             '@typescript-eslint/no-explicit-any': 'error',
 
             // ── 공개 API 경계 (10-architecture) ─────────────────────────
-            // 기능 폴더는 index.ts 로만 import. 내부 파일 deep import를 차단한다.
-            // (폴더 내부의 상대 import './exampleApi' 는 패턴에 안 걸린다)
-            'no-restricted-imports': [
-                'error',
-                {
-                    patterns: [
-                        {
-                            group: [
-                                '**/queries/*/*',
-                                '!**/queries/*/index',
-                                '**/components/*/*/*',
-                            ],
-                            message:
-                                '기능 폴더는 index.ts 공개 API로만 import하세요 (10-architecture).',
-                        },
-                    ],
-                },
-            ],
+            // 폴더 내부의 상대 import './exampleApi' 는 패턴에 안 걸린다
+            'no-restricted-imports': ['error', { patterns: [PUBLIC_API_PATTERN] }],
 
             // ── import 정렬 ─────────────────────────────────────────────
             'import/order': [
@@ -90,6 +114,37 @@ export default [
             ],
         },
     },
+    // ── Atomic 계층 의존 방향 (30-design-system) ────────────────────
+    // UI는 아래에서 위로만 쌓인다. atom이 molecule을, molecule이 organism을
+    // import하는 순간 "재사용 가능한 최소 단위"라는 전제가 깨지고,
+    // 그 컴포넌트를 쓰는 화면 전부가 상위 계층에 끌려 들어간다.
+    // 문서로만 두면 지켜지지 않으므로 여기서 error로 끊는다.
+    layerBoundary(
+        'atoms',
+        [
+            '**/molecules/**',
+            '**/organisms/**',
+            '**/components/**',
+            '**/queries/**',
+            '**/stores/**',
+        ],
+        'atom은 상위 계층·도메인·전역 상태를 모른다. 조합이 필요하면 molecule로 올리세요 (30-design-system).',
+    ),
+    layerBoundary(
+        'molecules',
+        [
+            '**/organisms/**',
+            '**/components/**',
+            '**/queries/**',
+            '**/stores/**',
+        ],
+        'molecule은 atom만 조합한다. 도메인·전역 상태가 필요하면 organism 또는 page 계층입니다 (30-design-system).',
+    ),
+    layerBoundary(
+        'organisms',
+        ['**/components/**', '**/queries/**', '**/stores/**'],
+        'design-system 의 organism은 도메인을 모른다. 데이터는 props로 받고, 도메인 결합이 필요하면 src/components/{Domain}/ 으로 옮기세요 (30-design-system).',
+    ),
     {
         // 스토리 export(Default, Interaction 등)는 관례상 PascalCase — 명명 규칙 예외
         files: ['src/**/*.stories.{ts,tsx}'],
