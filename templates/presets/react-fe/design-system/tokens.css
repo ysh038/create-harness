@@ -2,30 +2,104 @@
  * 디자인 토큰 정본 — 색상은 반드시 이 변수들만 사용한다 (stylelint가 원시값을 error 처리).
  * 존재하지 않는 토큰 이름을 발명하지 말 것. 필요하면 여기와 tokens.ts 양쪽에 먼저 추가한다.
  *
- * TODO: 아래 중립 회색 기본값을 프로젝트 브랜드 값으로 교체하세요.
+ * 2계층 구조 — primitive(원시 램프) → semantic(역할별 별칭, primitive만 참조).
+ * 컴포넌트는 semantic 토큰만 쓴다. 브랜드를 바꿀 땐 primitive 램프만 교체하면
+ * hover·pressed·subtle 등 그 램프를 참조하는 모든 semantic 별칭이 함께 따라간다 —
+ * 컴포넌트 CSS는 한 줄도 손대지 않는다.
+ *
+ * TODO: 아래 primary 램프 10단계를 프로젝트 브랜드 색상으로 교체하세요.
  */
 :root {
-    /* ===== 색상 (stylelint 강제 대상) ===== */
-    /* 브랜드 */
-    --color-primary: #4f46e5; /* TODO: 브랜드 주 색상 */
-    --color-primary-hover: #4338ca;
-    --color-secondary: #64748b;
+    /* ============================================================
+     * PRIMITIVE — 원시 스케일. 컴포넌트·페이지 CSS에서 직접 참조하지 않는다.
+     * ============================================================ */
+
+    /* 브랜드 램프 (50=가장 밝음 → 900=가장 어두움) */
+    --primitive-primary-50: #eef2ff;
+    --primitive-primary-100: #e0e7ff;
+    --primitive-primary-200: #c7d2fe;
+    --primitive-primary-300: #a5b4fc;
+    --primitive-primary-400: #818cf8;
+    --primitive-primary-500: #6366f1;
+    --primitive-primary-600: #4f46e5; /* TODO: 브랜드 주 색상 — semantic --color-primary 가 이 단계를 참조 */
+    --primitive-primary-700: #4338ca;
+    --primitive-primary-800: #3730a3;
+    --primitive-primary-900: #312e81;
+
+    /* 중립 램프 */
+    --primitive-gray-0: #ffffff;
+    --primitive-gray-50: #f8fafc;
+    --primitive-gray-100: #f1f5f9;
+    --primitive-gray-200: #e2e8f0;
+    --primitive-gray-300: #cbd5e1;
+    --primitive-gray-400: #94a3b8;
+    --primitive-gray-500: #64748b;
+    --primitive-gray-600: #475569;
+    --primitive-gray-700: #334155;
+    --primitive-gray-800: #1e293b;
+    --primitive-gray-900: #0f172a;
+
+    /* 상태 램프 — subtle(배경)·base·strong(강조 텍스트·hover) 3단만 둔다.
+       배지·알림·인라인 메시지가 주 용도라 브랜드 램프만큼 세분화할 필요가 없다. */
+    --primitive-success-100: #dcfce7;
+    --primitive-success-500: #16a34a;
+    --primitive-success-700: #15803d;
+    --primitive-warning-100: #fef3c7;
+    --primitive-warning-500: #d97706;
+    --primitive-warning-700: #b45309;
+    --primitive-danger-100: #fee2e2;
+    --primitive-danger-500: #dc2626;
+    --primitive-danger-700: #b91c1c;
+    --primitive-info-100: #e0f2fe;
+    --primitive-info-500: #0284c7;
+    --primitive-info-700: #0369a1;
+
+    /* ============================================================
+     * SEMANTIC — 컴포넌트·페이지 CSS는 이 계층만 참조한다.
+     * ============================================================ */
+
+    /* 브랜드 역할 — 버튼·링크 등 인터랙션 요소의 상태 4종 */
+    --color-primary: var(--primitive-primary-600);
+    --color-primary-hover: var(--primitive-primary-700);
+    --color-primary-pressed: var(--primitive-primary-800);
+    --color-primary-subtle: var(--primitive-primary-50);
+    --color-on-primary: var(--primitive-gray-0); /* primary 배경 위에 올리는 텍스트·아이콘 */
+    --color-secondary: var(--primitive-gray-500);
+    --color-secondary-hover: var(--primitive-gray-600);
 
     /* 표면·배경 */
-    --color-background: #ffffff;
-    --color-surface: #f8fafc;
-    --color-border: #e2e8f0;
+    --color-background: var(--primitive-gray-0);
+    --color-surface: var(--primitive-gray-50);
+    --color-surface-hover: var(--primitive-gray-100); /* 리스트 행·카드 hover */
+    --color-border: var(--primitive-gray-200);
+    --color-border-strong: var(--primitive-gray-300);
 
     /* 텍스트 */
-    --color-text: #0f172a;
-    --color-text-muted: #64748b;
-    --color-text-inverse: #ffffff;
+    --color-text: var(--primitive-gray-900);
+    --color-text-muted: var(--primitive-gray-500);
+    --color-text-disabled: var(--primitive-gray-400);
+    --color-text-inverse: var(--primitive-gray-0);
 
-    /* 상태 */
-    --color-success: #16a34a;
-    --color-warning: #d97706;
-    --color-error: #dc2626;
-    --color-info: #0284c7;
+    /* 상태 — subtle(배경) / base(아이콘·보더) / strong(강조 텍스트) 3종 세트 */
+    --color-success-subtle: var(--primitive-success-100);
+    --color-success: var(--primitive-success-500);
+    --color-success-strong: var(--primitive-success-700);
+    --color-warning-subtle: var(--primitive-warning-100);
+    --color-warning: var(--primitive-warning-500);
+    --color-warning-strong: var(--primitive-warning-700);
+    --color-danger-subtle: var(--primitive-danger-100);
+    --color-danger: var(--primitive-danger-500);
+    --color-danger-strong: var(--primitive-danger-700);
+    --color-info-subtle: var(--primitive-info-100);
+    --color-info: var(--primitive-info-500);
+    --color-info-strong: var(--primitive-info-700);
+
+    /* 포커스 링 — 키보드 포커스 표시는 선택이 아니라 필수다. 공공 디자인시스템(KRDS 등)
+       기준을 참고해 별도 토큰으로 뗀다. 사용: outline: var(--focus-ring-width) solid
+       var(--focus-ring-color); outline-offset: var(--focus-ring-offset); */
+    --focus-ring-color: var(--primitive-primary-500);
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
 
     /* ===== 간격 (v0.1은 강제 안 함 — 토큰이 채워지면 stylelint.config.js 에서 켤 것) ===== */
     --space-1: 4px;
@@ -41,10 +115,19 @@
     --radius-lg: 16px;
     --radius-full: 9999px;
 
-    /* ===== shadow ===== */
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.1);
+    /* ===== shadow — 문서 표면 위에 뜬 정도로 고른다. 사용 기준: 30-design-system.md ===== */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05); /* 인풋 포커스, 툴팁 */
+    --shadow-md: 0 4px 6px rgb(0 0 0 / 0.1); /* 드롭다운, 팝오버, sticky 헤더 */
+    --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.1); /* 모달, 다이얼로그 */
+
+    /* ===== 모션 — 상태 전환에 쓴다. 사용 기준: 30-design-system.md =====
+       강제 안 함(stylelint는 정적 분석이라 "전환이 있는가"를 못 본다) — /ux-review 에서 확인. */
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 320ms;
+    --easing-standard: cubic-bezier(0.4, 0, 0.2, 1); /* 일반 상태 전환 */
+    --easing-decelerate: cubic-bezier(0, 0, 0.2, 1); /* 화면에 들어오는 요소(모달 열림 등) */
+    --easing-accelerate: cubic-bezier(0.4, 0, 1, 1); /* 화면에서 나가는 요소(모달 닫힘 등) */
 
     /* ===== 타이포 (v0.1은 강제 안 함) ===== */
     --font-size-sm: 12px;

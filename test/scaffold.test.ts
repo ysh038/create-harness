@@ -229,7 +229,9 @@ describe('design-system 모듈을 빼면 관련 산출물이 전부 빠진다', 
         expect(dests).not.toContain('.cursor/rules/30-design-system.mdc')
         expect(dests).not.toContain('.cursor/commands/ds-init.md')
         expect(dests).not.toContain('.cursor/commands/ds-add.md')
+        expect(dests).not.toContain('.cursor/commands/ux-review.md')
         expect(dests).not.toContain('.claude/skills/design-system/SKILL.md')
+        expect(dests).not.toContain('.claude/skills/ux-review/SKILL.md')
         expect(dests).not.toContain('src/design-system/tokens.css')
         expect(dests).not.toContain('stylelint.config.js')
         // 나머지 코어는 그대로 있어야 한다
@@ -242,16 +244,36 @@ describe('design-system 모듈을 빼면 관련 산출물이 전부 빠진다', 
         const agents = plan.find((action) => action.dest === 'AGENTS.md')!
         expect(agents.content).not.toContain('/ds-init')
         expect(agents.content).not.toContain('/ds-add')
+        expect(agents.content).not.toContain('/ux-review')
         expect(agents.content).not.toContain('stylelint')
         expect(agents.content).toContain('/spec')
     })
 
-    it('design-system 을 포함하면 다시 나타난다', () => {
+    it('design-system 을 포함하면 다시 나타난다 (ux-review 포함)', () => {
         const dests = buildPlan(fakeDetect(), fullOptions('/tmp/fake')).map(
             (action) => action.dest,
         )
         expect(dests).toContain('.cursor/rules/30-design-system.mdc')
         expect(dests).toContain('.cursor/commands/ds-init.md')
+        expect(dests).toContain('.cursor/commands/ux-review.md')
+        expect(dests).toContain('.claude/skills/ux-review/SKILL.md')
+    })
+})
+
+describe('/ux-review — design-system과 별개 스킬로 존재한다', () => {
+    it('Claude 스킬로 fan-out 시 ds-init·ds-add와 합쳐지지 않는다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const uxReview = plan.find(
+            (action) => action.dest === '.claude/skills/ux-review/SKILL.md',
+        )
+        const designSystem = plan.find(
+            (action) => action.dest === '.claude/skills/design-system/SKILL.md',
+        )
+        expect(uxReview).toBeDefined()
+        expect(uxReview!.content).not.toContain('ds-init')
+        // design-system 스킬이 ds-add.md에서 /ux-review 를 짧게 참조하는 건 정상이다 —
+        // 여기서 확인하는 건 ux-review 워크플로 "본문"(체크리스트)이 통째로 합쳐지지 않는다는 것
+        expect(designSystem!.content).not.toContain('직접 고쳐도 되는 범위')
     })
 })
 

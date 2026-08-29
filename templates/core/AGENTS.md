@@ -31,6 +31,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `/ship` | 검증 → 커밋 → `docs/task-log.md` 기록 |
 {{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
 | `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + 스토리 선행 추가 |
+| `/ux-review` | 인터랙션 상태·토큰 사용·시각적 완성도 리뷰 — 테스트로 못 옮기는 품질을 다룬다 |
 {{/if}}
 
 ## 절대 금지

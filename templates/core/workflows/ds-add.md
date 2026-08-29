@@ -37,12 +37,15 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
    각 컴포넌트 폴더에:
    - `<Name>.tsx` — 토큰만 사용 (`tokens.css` 변수·`tokens.ts` 상수), 원시 색상값 금지.
      자기보다 위 계층 import 금지 (ESLint error)
-   - `<Name>.module.css`
+   - `<Name>.module.css` — 클릭 가능한 요소는 최소 `:hover`·`:focus-visible` 두 상태 포함
+     (`30-design-system` 필수 규칙). 뜬 요소는 계층에 맞는 `--shadow-*`, 상태 전환에는
+     `--duration-*`/`--easing-*` — 언제 쓰는지는 `30-design-system` 표 참고
    - `<Name>.stories.tsx` — `src/design-system/_story-template.tsx` 형식을 따르고
      `title` 은 계층 그대로(`Atoms/Button`), **play 함수 필수**:
      주요 상호작용(클릭·입력)과 포커스·aria 상태를 단정한다
    - `index.ts` — 공개 API
-6. **검증**: 스토리 테스트와 stylelint, lint(계층 위반 검사) 통과 확인.
+6. **검증**: 스토리 테스트와 stylelint, lint(계층 위반 검사) 통과 확인. UI 완성도(인터랙션
+   상태·트랜지션·그림자)는 정적 분석으로 못 잡으므로 `/ux-review`로 별도 확인한다.
 7. 이제 페이지를 쓴다. 페이지에는 훅 호출과 조립만 남는다 —
    새 마크업·스타일이 필요해지면 5번으로 돌아간다.
 

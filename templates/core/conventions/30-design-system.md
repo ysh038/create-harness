@@ -1,12 +1,12 @@
 ---
-description: 디자인 토큰 강제, Atomic 계층 구조, 컴포넌트 선행 조립 규칙, Storybook 온디맨드 설치
+description: 디자인 토큰 강제, 장식·모션 사용 기준, Atomic 계층 구조, 컴포넌트 선행 조립 규칙, Storybook 온디맨드 설치
 globs: src/**/*.{tsx,css}
 alwaysApply: false
 ---
 
 # 디자인시스템
 
-## 토큰은 닫힌 집합이다
+## 토큰은 닫힌 집합이다, 그리고 2계층이다
 
 - 색상은 **반드시** `src/design-system/tokens.css` 의 CSS 변수만 쓴다.
   원시값(`#hex`, `rgb()`, 색상 키워드)은 stylelint가 error 처리한다.
@@ -19,15 +19,78 @@ alwaysApply: false
   먼저 `tokens.css` 와 `tokens.ts` 양쪽에 추가하고 나서 쓴다.
 - TS/JSX에서 토큰 값이 필요하면 `tokens.ts` 의 타입드 상수를 import한다 (문자열 하드코딩 금지).
 
+`tokens.css` 는 `--primitive-*`(색상 램프)와 그 위의 semantic 별칭 2계층이다.
+**컴포넌트는 semantic 토큰만 쓴다 — `--primitive-*` 를 컴포넌트 CSS에서 직접 참조하지 않는다.**
+브랜드를 바꿀 땐 primitive 램프만 교체하면 그걸 참조하는 모든 semantic 별칭이 따라온다.
+
 ```css
-/* 좋음 */
-.card { background: var(--color-surface); border-radius: var(--radius-md); }
+/* 좋음 — semantic 토큰. hover·pressed·subtle 이 이미 상태별로 준비돼 있다 */
+.button {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-radius: var(--radius-md);
+}
+.button:hover { background: var(--color-primary-hover); }
+.button:active { background: var(--color-primary-pressed); }
+.button:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+}
+
+/* 나쁨 — primitive 직접 참조. semantic 계층을 두는 의미가 없어진다 */
+.button { background: var(--primitive-primary-600); }
 /* 나쁨 — stylelint error */
-.card { background: #ffffff; border-radius: 8px; }
+.button { background: #4f46e5; }
 ```
 
+- **인터랙션 요소(atom 중 클릭 가능한 것)는 최소 hover·focus-visible 두 상태를 다룬다.**
+  기본 상태 하나만 스타일링하고 끝내지 않는다 — `--color-primary-hover`/`-pressed`,
+  상태 색상의 `-subtle`(배경)/`-strong`(강조 텍스트) 세트가 이미 준비되어 있다.
+- **`:focus-visible` 에 `--focus-ring-*` 토큰으로 포커스 링을 반드시 그린다.**
+  `outline: none` 으로 지우기만 하고 대체 표시를 안 하는 것은 접근성 위반이다.
 - stylelint는 **색상만** 검사한다. 간격·타이포 토큰이 채워지면
   `stylelint.config.js` 의 주석 처리된 속성을 켠다.
+
+## 장식·모션 — 그림자·트랜지션은 언제 쓰는가
+
+색상 토큰만 강제하면 "일관되지만 밋밋한" 결과가 나온다. 인터랙션 요소·뜬 요소는
+아래 기준에 해당할 때 그림자·트랜지션을 **생략하지 않는다** — 근거 없이 아무 데나
+장식을 넣으라는 뜻은 아니다.
+
+| 상황 | 토큰 | 예 |
+|------|------|----|
+| 문서 표면 위에 살짝 뜬 요소 | `--shadow-sm` | 인풋 포커스, 툴팁 |
+| 문서 흐름과 분리된 플로팅 요소 | `--shadow-md` | 드롭다운, 팝오버, sticky 헤더 |
+| 배경을 덮는 오버레이 요소 | `--shadow-lg` | 모달, 다이얼로그 |
+| 값이 바뀌는 인터랙션(hover·active·열림/닫힘) | `--duration-*` + `--easing-*` | 버튼 hover, 아코디언 펼침 |
+
+```css
+/* 좋음 — 상태 전환에 트랜지션 토큰. 클릭 가능함이 느껴진다 */
+.card {
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--duration-base) var(--easing-standard);
+}
+.card:hover { box-shadow: var(--shadow-md); }
+
+/* 나쁨 — 값은 토큰인데 전환이 순간적이다 */
+.card:hover { box-shadow: var(--shadow-md); } /* transition 없음 */
+```
+
+- `transition`은 **바뀌는 속성만 지정**한다. `transition: all`은 의도치 않은 속성까지
+  전환시켜 버벅임의 원인이 되므로 금지.
+- 모달·팝오버처럼 화면에 들어오고 나가는 요소는 들어올 때 `--easing-decelerate`,
+  나갈 때 `--easing-accelerate`를 쓴다. 그 외 상태 전환은 `--easing-standard`.
+- `prefers-reduced-motion: reduce` 사용자에겐 전환·애니메이션을 끈다:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+```
+
+- **이 절은 stylelint가 아니라 `/ux-review`로 확인한다.** "그림자가 있어야 하는
+  자리에 있는가"는 정적 분석보다 시각적 판단이 더 정확하다 — 그래서 게이트가 아니라
+  리뷰 워크플로가 담당한다.
 
 ## Atomic 계층 — 페이지는 조립의 결과지 출발점이 아니다
 

@@ -30,8 +30,9 @@ npx create-harness-cli ./my-app --yes --dry-run   # 계획만 확인
   scripts 를 감지해 실제 존재하는 것만 담는다)
 - 커밋 게이트 — 같은 스크립트 하나를 Cursor(`beforeShellExecution`)와
   Claude Code(`PreToolUse`) 양쪽에 연결. checks 실패·`.env` 스테이징·force push 시 커밋 거부
-- 워크플로 6종 — `/spec`(명세) → `/impl`(테스트 우선 구현) → `/verify` → `/ship`,
-  UI 작업은 `/ds-init`(Storybook 온디맨드 설치)·`/ds-add`(페이지 전 Atomic 계층 선행)
+- 워크플로 7종 — `/spec`(명세) → `/impl`(테스트 우선 구현) → `/verify` → `/ship`,
+  UI 작업은 `/ds-init`(Storybook 온디맨드 설치)·`/ds-add`(페이지 전 Atomic 계층 선행)·
+  `/ux-review`(테스트로 못 옮기는 시각적 품질 리뷰 — AC 강제를 우회하는 별도 트랙)
 - 린트 강제 — 명명 규칙(`I` 접두 등)·공개 API 경계·Atomic 계층 역방향 import·
   색상 원시값 차단(stylelint)을 error 처리
 
@@ -65,9 +66,9 @@ npx create-harness-cli [대상 디렉터리] [옵션]
 대화형 실행에서는 비권장 모듈도 `(비권장)` 표시와 근거를 달고 목록에 나오므로 직접 켤 수 있습니다.
 
 모듈을 빼면 **그 모듈을 전제하는 규칙·워크플로도 함께 빠집니다.** 예를 들어
-`design-system` 없이 설치하면 `30-design-system` 규칙, `/ds-init`·`/ds-add` 워크플로,
-`AGENTS.md` 의 해당 항목이 모두 생성되지 않습니다. 존재하지 않는 파일을 가리키는
-규칙은 에이전트를 헷갈리게 할 뿐입니다.
+`design-system` 없이 설치하면 `30-design-system` 규칙, `/ds-init`·`/ds-add`·`/ux-review`
+워크플로, `AGENTS.md` 의 해당 항목이 모두 생성되지 않습니다. 존재하지 않는 파일을
+가리키는 규칙은 에이전트를 헷갈리게 할 뿐입니다.
 
 ## 디자인시스템에 대한 입장
 
@@ -96,6 +97,15 @@ src/components/layouts/        template — 슬롯 레이아웃
 **데이터를 가져오면 컴포넌트가 아니라 page/hook이다.** 이 규칙은 문서로만 두면
 지켜지지 않으므로 `lint` 모듈의 ESLint 조각이 계층 역방향 import를 error로 끊습니다
 (atom → molecule, molecule → organism, design-system → queries/stores).
+
+### 토큰은 primitive → semantic 2계층
+
+`tokens.css`는 색상 램프(`--primitive-*`)와 그 위의 역할별 별칭(`--color-*`) 2계층이다.
+컴포넌트는 semantic 토큰만 쓰고, 브랜드를 바꿀 땐 primitive 램프만 교체한다 —
+`-hover`·`-pressed`·`-subtle` 같은 상태 별칭이 자동으로 새 브랜드를 따라간다.
+구조는 [KRDS](https://github.com/KRDS-uiux/krds-uiux)(대한민국 디지털정부 디자인시스템)의
+토큰 계층을 참고했다 — 코드를 그대로 쓰지 않고 계층·상태 세트 패턴만 이식했다.
+그림자·트랜지션 토큰과 언제 쓰는지 기준도 함께 있다 — 근거는 `DECISIONS.md` #15.
 
 같은 이유로 이 하네스는 **Tailwind 를 권장하지 않습니다.** 값이 클래스 문자열 안에
 있어 stylelint 가 닿지 못하고, 임의값(`bg-[#3b82f6]`)을 막으려면 별도의 ESLint 규칙
@@ -153,7 +163,7 @@ UI 작업이 없는 저장소에 Playwright 바이너리까지 끌고 들어오�
 - **Claude Code**: `/plugin` 설치는 살아있는 세션 안에서만 실행되는 명령이라 이 CLI가
   대신 실행할 수 없다. 대신 두 줄짜리 설치 명령을 "다음 단계" 맨 위에 출력한다.
 
-## Storybook은 왜 미리 설치하지 않나
+## 개발
 
 ```bash
 npm run check   # typecheck → build → test

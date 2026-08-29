@@ -145,7 +145,10 @@ const buildRuleActions = (
         })
 
 const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship']
-const DESIGN_SYSTEM_WORKFLOWS = ['ds-init', 'ds-add']
+// ds-init·ds-add는 Claude에서 design-system 스킬 하나로 합쳐진다 (설치·추가는 한 흐름)
+const DESIGN_SYSTEM_SETUP_WORKFLOWS = ['ds-init', 'ds-add']
+// ux-review는 목적이 달라(진행 중인 UI 품질 리뷰) 독립 스킬로 둔다
+const DESIGN_SYSTEM_REVIEW_WORKFLOWS = ['ux-review']
 
 /** templates/core/workflows → .cursor/commands + .claude/skills(SKILL.md) fan-out */
 const buildWorkflowActions = (
@@ -157,9 +160,10 @@ const buildWorkflowActions = (
 
     // 디자인시스템 워크플로는 토큰·스토리 템플릿을 전제한다 — 모듈이 빠지면 함께 뺀다
     const hasDesignSystem = options.modules.includes('design-system')
-    const workflows = hasDesignSystem
-        ? [...BASE_WORKFLOWS, ...DESIGN_SYSTEM_WORKFLOWS]
-        : BASE_WORKFLOWS
+    const designSystemWorkflows = hasDesignSystem
+        ? [...DESIGN_SYSTEM_SETUP_WORKFLOWS, ...DESIGN_SYSTEM_REVIEW_WORKFLOWS]
+        : []
+    const workflows = [...BASE_WORKFLOWS, ...designSystemWorkflows]
 
     for (const name of workflows) {
         parsed.set(name, parseFrontmatter(loadTemplate(`core/workflows/${name}.md`, vars)))
@@ -190,8 +194,8 @@ const buildWorkflowActions = (
                 module: 'core',
             })
         }
-        // design-system 스킬 하나가 ds-init·ds-add 두 흐름을 포함한다
         if (hasDesignSystem) {
+            // design-system 스킬 하나가 ds-init·ds-add 두 흐름을 포함한다
             const dsInit = parsed.get('ds-init')!
             const dsAdd = parsed.get('ds-add')!
             actions.push({
@@ -205,6 +209,19 @@ const buildWorkflowActions = (
                     `# Design System\n\n## Part 1 — ds-init (최초 1회 설정)\n\n${dsInit.body}\n\n---\n\n## Part 2 — ds-add (UI 작업마다)\n\n${dsAdd.body}`,
                 module: 'core',
             })
+            // ux-review는 별도 스킬 — ds-add와 ship 사이 아무 때나 부르는 독립 흐름이라 합치지 않는다
+            for (const name of DESIGN_SYSTEM_REVIEW_WORKFLOWS) {
+                const { meta, body } = parsed.get(name)!
+                actions.push({
+                    dest: `.claude/skills/${name}/SKILL.md`,
+                    content:
+                        serializeFrontmatter({
+                            name,
+                            description: meta['description'] ?? '',
+                        }) + body,
+                    module: 'core',
+                })
+            }
         }
     }
 

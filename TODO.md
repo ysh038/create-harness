@@ -34,6 +34,9 @@
 - [x] UI 규칙을 Atomic 계층으로 전환 — `design-system/{atoms,molecules,organisms}` + 도메인 결합 시
       `components/{Domain}` 으로 분리, `/ds-add` 가 화면 분해를 선행 강제, 계층 역방향 import를
       ESLint error로 차단 (위반 픽스처 lint로 검증 — DECISIONS #14)
+- [x] 색상 토큰을 primitive → semantic 2계층으로 재구성(hover/pressed/subtle, focus-ring) +
+      장식·모션 토큰(`--duration-*`/`--easing-*`, 그림자 사용 기준) + `/ux-review` 워크플로 신설
+      (AC로 못 옮기는 시각적 품질 리뷰 — 실사용 A/B 비교로 드러난 문제, DECISIONS #15·#16)
 - [ ] `create-harness update` — manifest 해시로 로컬 수정을 구분하는 3-way 병합
 - [ ] `.claude-plugin/marketplace.json` — Claude Code 플러그인 배포 채널
 - [ ] self-hosting: create-harness를 자기 저장소에 적용 (dogfooding)
