@@ -312,3 +312,30 @@ UI 변경 시 `/ux-review`를 거쳤는지 확인하는 절을 추가해 최소�
 시작되는 시점인 `/ds-init` 절차 맨 앞에 브랜드 토큰 확인을 못박고, `/ux-review`
 체크리스트에도 상기 항목으로 넣어 이중 안전망을 뒀다. 매 `/ship`마다 확인하는
 안은 채택하지 않았다 — 브랜드가 이미 정해진 뒤엔 매번 물어보는 게 소음이 된다.
+
+## 17. 실사용에서 발견한 lint 버그 2건 수정
+
+`design-system`+`lint` 모듈을 켜서 실제로 계산기 화면 하나를 만들어보는 실사용
+검증(최신 `npm create vite` react-ts 템플릿 — ESLint 대신 oxlint가 기본이라 flat
+config가 아예 없는 프로젝트) 중 발견했다. 둘 다 지금까지 테스트가 없어서 안
+잡혔다.
+
+1. **`requiredDevDeps()`에 `eslint`·`typescript-eslint` 누락.**
+   `eslint.harness.config.js`가 `import tseslint from 'typescript-eslint'`를 직접
+   쓰는데도 lint 모듈의 필요 의존성 안내 목록엔 `eslint-plugin-import`·commitlint·
+   prettier만 있었다. `lint` 모듈의 추천 조건(`suggestLint`)이 "기존 flat config
+   존재"를 전제해서 보통은 `eslint`가 이미 있었을 뿐이지, `--modules`로 강제
+   포함하면(9번 결정이 허용하는 경로) 실제로 없는 상황이 나온다 — 이번처럼.
+   `eslint`·`typescript-eslint` 둘 다 목록에 추가했다.
+
+2. **`naming-convention`이 화살표 함수 컴포넌트를 오탐.** `const Button = () =>
+   ...` 같은, React에서 가장 흔한 컴포넌트 선언 형태가 PascalCase 변수인데,
+   `variable` 셀렉터의 일반 규칙(`format: ['camelCase']`)에 그대로 걸려 표준
+   패턴 자체가 위반으로 잡혔다. `types: ['function']` 셀렉터를 boolean 예외
+   바로 다음, 일반 camelCase 규칙보다 앞에 추가했다 — naming-convention은
+   식별자마다 먼저 매치되는 셀렉터 하나만 적용하므로 순서가 중요하다.
+
+두 버그 모두 `requiredDevDeps()`와 생성된 `eslint.harness.config.js` 내용을
+직접 검증하는 테스트가 그동안 없었다는 공통점이 있다. 재발 방지로 두 항목 다
+테스트를 추가했다 — `requiredDevDeps` describe 블록 신설, naming-convention
+예외가 실제로 템플릿에 있는지 확인하는 케이스 추가.

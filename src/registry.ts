@@ -469,6 +469,11 @@ export const requiredDevDeps = (options: IScaffoldOptions): string[] => {
     }
     if (options.modules.includes('lint')) {
         deps.push(
+            // eslint.harness.config.js 가 직접 import한다 — 추천 경로(기존 flat config
+            // 존재)에서는 이미 있을 확률이 높지만, --modules 로 강제 포함한 경우
+            // 실제로 없는 걸 실사용에서 확인했다 (예: 최신 Vite 템플릿은 oxlint 기본)
+            'eslint',
+            'typescript-eslint',
             'eslint-plugin-import',
             '@commitlint/cli',
             '@commitlint/config-conventional',

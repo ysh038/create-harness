@@ -67,6 +67,13 @@ export default [
                     format: ['PascalCase', 'camelCase'],
                     prefix: ['is', 'has', 'should', 'can', 'must', 'was', 'will'],
                 },
+                // 화살표 함수 컴포넌트(const Button = () => ...)는 PascalCase 변수다 —
+                // 이 예외가 없으면 표준 React 컴포넌트 선언 방식 자체가 위반으로 잡힌다
+                {
+                    selector: 'variable',
+                    types: ['function'],
+                    format: ['PascalCase', 'camelCase'],
+                },
                 {
                     selector: 'variable',
                     format: ['camelCase'],

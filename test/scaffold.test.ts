@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 // 빌드 산출물을 테스트한다 (npm run check 가 build → test 순서를 보장)
 import { patchEslintIgnores } from '../dist/eslintPatch.js'
 import { writeActions } from '../dist/manifest.js'
-import { buildChecks, buildPlan } from '../dist/registry.js'
+import { buildChecks, buildPlan, requiredDevDeps } from '../dist/registry.js'
 import { recommendedModules, suggestModules } from '../dist/suggest.js'
 import type { IDetectResult, IScaffoldOptions } from '../src/types.js'
 
@@ -119,6 +119,16 @@ describe('buildPlan', () => {
         expect(eslint.content).toContain('PUBLIC_API_PATTERN, { group: forbidden')
     })
 
+    it('naming-convention 이 화살표 함수 컴포넌트(PascalCase 변수)를 예외로 둔다', () => {
+        // types: ['function'] 예외가 없으면 `const Button = () => ...` 같은 표준 React
+        // 컴포넌트 선언 자체가 "변수는 camelCase" 규칙에 걸려 오탐이 난다 (실사용에서 확인)
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const eslint = plan.find(
+            (action) => action.dest === 'eslint.harness.config.js',
+        )!
+        expect(eslint.content).toContain("types: ['function']")
+    })
+
     it('cursor 미선택 시 규칙은 docs/conventions/ 로 간다', () => {
         const plan = buildPlan(fakeDetect(), {
             ...fullOptions('/tmp/fake'),
@@ -154,6 +164,20 @@ describe('buildChecks', () => {
             { ...fullOptions('/tmp/fake'), modules: [] },
         )
         expect(checks).toEqual([])
+    })
+})
+
+describe('requiredDevDeps', () => {
+    it('lint 모듈은 eslint.harness.config.js 가 import하는 패키지를 전부 포함한다', () => {
+        // 실사용(--modules 로 lint 강제 포함, 호스트에 eslint 자체가 없던 경우)에서
+        // eslint·typescript-eslint 가 안내 목록에 없어 설치가 안 되는 문제가 있었다.
+        const deps = requiredDevDeps({
+            ...fullOptions('/tmp/fake'),
+            modules: ['lint'],
+        })
+        expect(deps).toContain('eslint')
+        expect(deps).toContain('typescript-eslint')
+        expect(deps).toContain('eslint-plugin-import')
     })
 })
 
