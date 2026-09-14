@@ -84,7 +84,8 @@
 - [x] 버전 0.4.2 bump (package.json)
 - [x] DECISIONS.md #25 기록
 - [x] AGENTS.md raw Mustache 테스트 추가 (여러 시나리오)
-- [ ] 테스트 스냅샷 재생성 + 통과 확인
+- [x] 테스트 스냅샷 재생성 + 통과 확인 (49/49 통과)
+- [x] PR 생성 (https://github.com/ysh038/create-harness/pull/7)
 - [ ] npm 배포 create-harness-cli@0.4.2 (PR 병합 후, 수동)
 
 ## v0.5
