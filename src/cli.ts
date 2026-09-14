@@ -66,6 +66,7 @@ const main = async (): Promise<void> => {
             preset: { type: 'string', default: 'react-fe' },
             agents: { type: 'string' },
             modules: { type: 'string' },
+            storybook: { type: 'string' },
             ponytail: { type: 'boolean', default: false },
             'dry-run': { type: 'boolean', default: false },
             yes: { type: 'boolean', short: 'y', default: false },
@@ -87,9 +88,10 @@ const main = async (): Promise<void> => {
   --preset <name>     프리셋 (기본: react-fe)
   --agents <csv>      cursor,claude (기본: 둘 다)
   --modules <csv>     design-system,auth-http,data-fetching,lint
+  --storybook <state> off|pending (design-system 모듈 선택 시만 유효)
   --ponytail          서드파티 ponytail 규칙(YAGNI 사다리) 연동
   --dry-run           파일을 쓰지 않고 계획만 출력
-  -y, --yes           질문 없이 기본값/옵션값으로 진행
+  -y, --yes           질문 없이 진행 (명시적 플래그와 함께 쓰면 해당 값 사용)
   --install           필요한 devDependency 설치 명령까지 출력 후 실행 안내
   -h, --help          도움말
   -v, --version       버전`)
@@ -115,6 +117,18 @@ const main = async (): Promise<void> => {
     const suggestions = suggestModules(detected)
     const explicitModules = parseCsv(values.modules, VALID_MODULES, 'module')
 
+    // --storybook 검증: off|pending만 허용 (ready는 설치 시점에 불가)
+    let explicitStorybook: 'off' | 'pending' | undefined = undefined
+    if (values.storybook !== undefined) {
+        if (values.storybook !== 'off' && values.storybook !== 'pending') {
+            console.error(
+                `--storybook 는 'off' 또는 'pending' 만 허용합니다 (받은 값: ${values.storybook})`,
+            )
+            process.exit(1)
+        }
+        explicitStorybook = values.storybook as 'off' | 'pending'
+    }
+
     const defaults: IScaffoldOptions = {
         targetDir,
         preset: 'react-fe',
@@ -125,13 +139,14 @@ const main = async (): Promise<void> => {
         // --modules 를 주지 않으면 감지 결과가 기본값을 정한다
         modules: explicitModules ?? recommendedModules(detected),
         ponytail: values.ponytail ?? false,
-        // --yes 경로에서는 design-system 선택 시 pending, 없으면 off
+        // 명시적 --storybook 이 있으면 그걸 쓰고, 없으면 design-system 선택 여부로 추론
         storybook:
-            (explicitModules ?? recommendedModules(detected)).includes(
+            explicitStorybook ??
+            ((explicitModules ?? recommendedModules(detected)).includes(
                 'design-system',
             )
                 ? 'pending'
-                : 'off',
+                : 'off'),
         dryRun: values['dry-run'],
         yes: values.yes,
         install: values.install,

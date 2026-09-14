@@ -35,17 +35,22 @@ description: Interactive harness installation workflow for agents - mirrors CLI 
    - "ponytail도 함께 설정할까요?" (YAGNI 사다리, 최소 구현 강제 규칙)
    - yes/no
 
-2. **답변을 받으면 명시적 플래그로 CLI 실행**:
+2. **답변을 받으면 명시적 플래그와 함께 `-y`로 CLI 실행**:
 
 ```bash
 {{PM_EXEC}} create-harness-cli <project-path> \
   --agents <cursor|claude|cursor,claude> \
   --modules <모듈1,모듈2,...> \
   --storybook <off|pending> \
-  --ponytail
+  --ponytail \
+  -y
 ```
 
-   **중요**: `-y/--yes` 플래그를 쓰지 않는다 — 기본값이 의도와 다를 수 있다.
+   **중요**: 
+   - 명시적 플래그 (`--agents`, `--modules`, `--storybook`, `--ponytail`)와 함께 `-y`를 사용한다
+   - 이는 "묻지 말고 이 값들을 사용하라"는 의미다 (조용한 기본값이 아님)
+   - 값 없이 단순히 `-y`만 쓰면 추론된 기본값을 쓰게 되어 의도와 다를 수 있다
+   - `--storybook`은 design-system 모듈 선택 시에만 전달 (선택 안 했으면 생략)
 
 3. **설치 완료 후**:
    - `.harness/config.json` 이 생성됐는지 확인

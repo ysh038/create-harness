@@ -57,9 +57,11 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
    - 포함 모듈: design-system, auth-http, data-fetching, lint (core는 항상 포함)
 {{#if DESIGN_SYSTEM}}   - Storybook 계획 (design-system 선택 시): 사용 의향 있으면 `pending`, 없으면 `off`
 {{/if}}   - ponytail 설치 여부
-2. 답을 받으면 **명시적 플래그로 CLI를 실행**한다 — `--agents`, `--modules`{{#if DESIGN_SYSTEM}}, `--storybook`{{/if}}, `--ponytail`
-3. `-y/--yes`로 건너뛰지 않는다 (답변이 비어 있으면 기본값이 의도와 다를 수 있다)
-4. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
+2. 답을 받으면 **명시적 플래그와 함께 `-y`로 CLI를 실행**한다
+   - 예: `--agents cursor,claude --modules design-system,lint --storybook pending --ponytail -y`
+   - 명시적 플래그 + `-y`는 "묻지 말고 이 값들 사용"을 의미 (조용한 기본값이 아님)
+   - 값 없이 `-y`만 쓰면 안 됨 — 추론된 기본값이 의도와 다를 수 있다
+3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
 {{#if DESIGN_SYSTEM}}
 
 **Storybook 상태별 처리**:

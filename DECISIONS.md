@@ -426,8 +426,15 @@ npm publish
 3. Storybook 계획 (design-system 선택 시 — `pending` or `off`)
 4. ponytail 설치 여부
 
-답을 받으면 명시적 플래그(`--agents`, `--modules`, `--storybook`, `--ponytail`)로 CLI를 실행한다.
-`-y` 는 쓰지 않는다.
+답을 받으면 **명시적 플래그와 함께 `-y`로 CLI를 실행**한다:
+- `--agents`, `--modules`, `--storybook` (design-system 선택 시), `--ponytail`, `-y`
+- 명시적 플래그 + `-y` 는 "묻지 말고 이 값들을 사용하라"는 의미 (조용한 기본값이 아님)
+- 값 없이 `-y`만 쓰는 것은 피해야 함 — 추론된 기본값이 의도와 다를 수 있다
+
+CLI 플래그 추가:
+- `--storybook <off|pending>` 플래그 추가 (`src/cli.ts`)
+- `ready` 상태는 설치 시점에 불가 (이미 설치됨을 의미하므로)
+- 명시적 `--storybook` 이 있으면 design-system 모듈 선택 여부에 따른 추론보다 우선
 
 `.harness/config.json` 이 이미 존재하고 해당 필드가 채워져 있으면 재질문하지 않는다 —
 이미 설치된 하네스를 다시 실행하는 경우는 설정 변경 등 명시적 의도가 있을 때뿐이다.
@@ -438,10 +445,11 @@ npm publish
 (간단히 확인 권장, 필수 아님). `ready` 면 이미 설치됨.
 
 문서 변경:
-- `templates/core/AGENTS.md`: "설치·설정 질문이 비어 있을 때" 절 추가 (짧게, AGENTS.md는 간결 유지)
+- `templates/core/AGENTS.md`: "설치·설정 질문이 비어 있을 때" 절 추가, 명시적 플래그 + `-y` 사용 명시
 - `templates/core/workflows/ds-init.md`: 절차 첫머리에 Storybook 의향 확인 단계 추가
 - `templates/core/workflows/harness-setup.md`: 새 워크플로 생성 — 에이전트가 하네스 설치 시 실행
 - `src/registry.ts`: `BASE_WORKFLOWS` 에 `harness-setup` 등록 (Cursor command + Claude skill)
+- `src/cli.ts`: `--storybook` 플래그 추가, `--help` 업데이트, 명시적 값이 추론보다 우선하도록 수정
 
 이번 변경은 **질문 미러링만** 다룬다. 프로젝트 모드(free/inspire/implement), Figma 디자인
 참조 맵, 코딩 스타일 선호(function/arrow) 등의 설문 추가는 별도 범위다.
