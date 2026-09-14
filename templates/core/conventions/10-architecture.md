@@ -51,7 +51,7 @@ import { fetchExampleList } from '../../queries/Example/exampleApi'
 
 - 도메인별 하위 폴더: `components/Chat/`, `hooks/chat/`, `queries/Chat/`
 - 공용은 `shared/`: `components/shared/`, `hooks/shared/`, `stores/shared/`
-- 스타일은 컴포넌트 옆 `*.module.css` (CSS Modules)
+- 스타일: `{{STYLING}}` 방식 사용 (프로젝트 설정)
 
 ### UI 계층 (Atomic)
 

@@ -43,7 +43,12 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
    각 컴포넌트 폴더에:
    - `<Name>.tsx` — 토큰만 사용 (`tokens.css` 변수·`tokens.ts` 상수), 원시 색상값 금지.
      자기보다 위 계층 import 금지 (ESLint error)
-   - `<Name>.module.css` — 클릭 가능한 요소는 최소 `:hover`·`:focus-visible` 두 상태 포함
+   - 스타일 파일 (`.harness/config.json` 의 `style.styling` 에 따라):
+     - `css-modules`: `<Name>.module.css` + `import styles from './Name.module.css'`
+     - `css` (plain): `<Name>.css` (또는 colocated plain CSS) + `import './Name.css'`
+     - `tailwind`: 최소한의 CSS 모듈 파일 또는 없음, 유틸리티 클래스 사용
+     - `detected` (CSS-in-JS 등): 짧은 가이드만, module.css 강제 안 함
+   - 어떤 스타일 방식이든 클릭 가능한 요소는 최소 `:hover`·`:focus-visible` 두 상태 포함
      (`30-design-system` 필수 규칙). 뜬 요소는 계층에 맞는 `--shadow-*`, 상태 전환에는
      `--duration-*`/`--easing-*` — 언제 쓰는지는 `30-design-system` 표 참고
    - `<Name>.stories.tsx` — `src/design-system/_story-template.tsx` 형식을 따르고

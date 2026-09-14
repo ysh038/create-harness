@@ -44,6 +44,12 @@ UI 작업이 처음 필요해진 시점에 실행한다. 이미 `.storybook/` �
 {{PM_EXEC}} storybook add @storybook/addon-a11y
 ```
 
+   **Peer dependency 충돌 대응**: `storybook init` 후 npm이 peer conflict를 보고하면
+   (예: `@vitest/browser-playwright`와 vitest 버전 불일치):
+   - vitest 관련 패키지를 Storybook이 요구하는 버전으로 맞추거나
+   - `npm install --legacy-peer-deps` 로 경고를 무시하고 진행
+   실제 빌드·테스트가 깨지지 않으면 경고만으로 막을 필요는 없다.
+
 4. **접근성 위반을 검증 실패로**: `.storybook/preview.(ts|tsx)` 의 `parameters.a11y.test` 를
    `'todo'`(init 기본값)에서 `'error'` 로 바꾼다:
 

@@ -684,3 +684,71 @@ README 끝에 짧은 노트 추가:
 
 v0.4.1은 대상 프로젝트 산출물 개선(Example* naming, Figma 우선), 감지 로직 수정(CSS Modules vs plain CSS), 
 워크플로 지침 명확화(제품 스토리)를 포함한다. npm 배포는 PR 병합 후 수동 실행.
+
+## 25. 버전 0.4.2 — Harness v05 Tester dogfood 피드백 반영
+
+실제 사용(Harness v05 테스터 dogfood)에서 발견한 버그 4건을 수정한다:
+
+### 1. ds-add가 config.style.styling을 무시하고 .module.css를 강제함
+
+**문제**: `templates/core/workflows/ds-add.md`가 스타일 파일을 `<Name>.module.css`로 하드코딩했다.
+프로젝트가 plain CSS나 Tailwind를 쓰는 경우에도 CSS Modules를 강제해 혼란을 줬다.
+
+**수정**:
+- ds-add.md에서 스타일 파일 생성 지침을 `.harness/config.json`의 `style.styling` 값에 따라 조건부로 작성
+  - `css-modules`: `<Name>.module.css` + `import styles from './Name.module.css'`
+  - `css` (plain): `<Name>.css` + `import './Name.css'`
+  - `tailwind`: 최소한의 CSS 모듈 또는 없음, 유틸리티 클래스
+  - `detected` (CSS-in-JS): 짧은 가이드, module.css 강제 안 함
+- `10-architecture.md`의 "스타일은 컴포넌트 옆 `*.module.css`" 문구를 `{{STYLING}}` 변수로 교체
+
+이제 각 프로젝트의 실제 스타일 방식을 존중한다.
+
+### 2. AGENTS.md에 Mustache 조건문이 raw로 출력됨
+
+**문제**: 렌더링된 `AGENTS.md`에 `{{#if HAS_DESIGN_REFS}}`·`{{/if}}` 같은 Mustache 조건문이
+그대로 남았다. 원인은 `DESIGN_FIDELITY`를 조건문에 직접 사용했는데, 이 변수는 boolean이 아니라
+문자열 값이었다 — 렌더러는 `vars[key] === 'true'`일 때만 블록을 유지하므로, `fidelity`가 `null`이면
+빈 문자열이 되고 블록이 남아버렸다.
+
+**수정**:
+- `src/registry.ts`에 `HAS_DESIGN_FIDELITY: String(!!options.fidelity)` 추가
+- `templates/core/AGENTS.md`에서 `{{#if DESIGN_FIDELITY}}`를 `{{#if HAS_DESIGN_FIDELITY}}`로 변경
+- 테스트 추가: `AGENTS.md`에 raw `{{#if` / `{{/if}}`가 남지 않는지 여러 시나리오로 검증
+  (design-system ON/OFF, free/implement 모드, fidelity 유무)
+
+조건문은 반드시 boolean 플래그(`'true'` / `'false'`)를 사용해야 한다는 원칙 재확인.
+
+### 3. Storybook peer dependency 충돌 대응 안내 부족
+
+**문제**: `storybook init` 후 npm peer conflict(예: `@vitest/browser-playwright`와 vitest 버전 불일치)가
+자주 발생하는데, 안내가 없어 사용자가 막혔다.
+
+**수정**:
+- `templates/core/workflows/ds-init.md`에 "Peer dependency 충돌 대응" 절 추가
+  - vitest 관련 패키지 버전을 Storybook 요구사항에 맞추거나
+  - `npm install --legacy-peer-deps`로 경고 무시
+  - 실제 빌드·테스트가 깨지지 않으면 경고만으로 막을 필요 없음
+
+짧고 실용적인 안내로 첫 설치 마찰을 줄인다.
+
+### 4. ds-ref에 "올바른 화면 노드 필요" 안내 추가
+
+**보충**: `/ds-ref`로 Figma 링크를 붙일 때 **올바른 화면/컴포넌트 노드**가 필요하다는 안내가 없었다.
+잘못된 노드(상위 페이지, 다른 variant)를 링크하면 구현이 어긋난다.
+
+**수정**:
+- `templates/core/workflows/ds-ref.md` "컴포넌트 링크 등록" 절에 짧은 노트 추가
+  - 올바른 노드 필요성 명시
+  - 이미 잘못 링크한 경우 `status: 'waived'` 또는 재링크로 수정 가능
+
+이것은 제품 기능이 아니라 워크플로 안내 개선이다.
+
+### 영향 범위
+
+- 대상 프로젝트로 복사되는 템플릿 3개 수정 (ds-add.md, AGENTS.md, ds-init.md, ds-ref.md, 10-architecture.md)
+- 렌더러 변수 정의 1개 추가 (HAS_DESIGN_FIDELITY)
+- 테스트 케이스 4개 추가 (Mustache 누출 방지 검증)
+- 버전 0.4.2 bump
+
+npm 배포는 PR 병합 후 수동 실행. 이번 릴리스는 버그 수정이 주 목적이다.
