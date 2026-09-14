@@ -307,11 +307,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
         if (!explicitMode && !configFile.mode) {
             missing.push('--mode (free|inspire|implement)')
         }
-        if (
-            !values.agents &&
-            !configFile.agents &&
-            (!configFile.modules || configFile.modules.length === 0)
-        ) {
+        if (!values.agents && !configFile.agents) {
             missing.push('--agents (cursor|claude)')
         }
         if (!explicitModules && !configFile.modules) {
@@ -375,7 +371,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
         ? await runPrompts(detected, defaults, suggestions)
         : defaults
 
-    // 감지 때문에 빠진 모듈은 이유를 남긴다 (--yes 로 프롬프트를 건너뛴 경우 특히)
+    // 감지 때문에 빠진 모듈은 이유를 남긴다
     const excluded = suggestions.filter(
         (suggestion) =>
             !suggestion.isRecommended &&
