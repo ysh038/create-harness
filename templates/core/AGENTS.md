@@ -89,10 +89,10 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
    - 포함 모듈: design-system, auth-http, data-fetching, lint (core는 항상 포함)
 {{#if DESIGN_SYSTEM}}   - Storybook 계획 (design-system 선택 시): 사용 의향 있으면 `pending`, 없으면 `off`
 {{/if}}   - ponytail 설치 여부
-2. 답을 받으면 **명시적 플래그와 함께 `-y`로 CLI를 실행**한다
-   - 예: `--mode implement --component-declaration function --component-export default --agents cursor --modules design-system,lint --storybook pending -y`
-   - 명시적 플래그 + `-y`는 "묻지 말고 이 값들 사용" (조용한 기본값 아님)
-   - 값 없이 `-y`만 쓰면 안 됨
+2. 답을 받으면 **명시적 플래그와 함께 CLI를 실행**한다
+   - 예: `--mode implement --component-declaration function --component-export default --agents cursor --modules design-system,lint --storybook pending`
+   - **모든 필수 답변을 플래그 또는 `--config <path.json>`으로 제공**
+   - Non-TTY 환경에서 필수 답변 누락 시 즉시 에러 (stdin 프롬프트로 걸리지 않음)
 3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
 {{#if DESIGN_SYSTEM}}4. **디자인 화면 작업**은 `/ds-add` (컴포넌트 추가) 워크플로에서 처리
    - **implement 모드**: 새 화면/컴포넌트 시작 시 참고 URL을 물어본다

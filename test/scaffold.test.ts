@@ -55,7 +55,6 @@ const fullOptions = (targetDir: string): IScaffoldOptions => ({
     },
     acceptDisclaimer: false,
     dryRun: false,
-    yes: true,
     install: false,
 })
 

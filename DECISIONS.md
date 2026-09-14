@@ -810,3 +810,115 @@ npm 배포는 PR 병합 후 수동 실행. 이번 릴리스는 버그 수정이 
 - 테스트 통과
 - 설치 경로에 Figma 프롬프트 없음
 
+## 27. 버전 0.4.4 — `-y`/`--yes` 제거, 명시적 두 경로 (TTY vs explicit flags/config)
+
+### 배경 (v07 dogfood 문제)
+
+에이전트가 TTY 없이 CLI를 실행할 때 두 가지 실패 패턴:
+1. `-y` 사용 → 질문 건너뛰고 잘못된 기본값 적용 (모드/모듈/스타일 추론 실패)
+2. `-y` 없이 실행 → clack 프롬프트에서 stdin 대기로 무한 대기
+
+둘 다 나쁨. 근본 원인은 `-y`가 "조용한 기본값" 경로를 열어뒀기 때문.
+
+### 해결 방안
+
+**두 경로만 허용:**
+
+1. **Interactive (TTY)**: `process.stdin.isTTY === true` → 현재대로 `@clack/prompts` 사용
+   - 명시적 플래그는 여전히 해당 질문을 건너뛰고 prefill 역할 (partial flags OK)
+   
+2. **Explicit answers (non-TTY / automation)**: clack 안 씀
+   - 모든 필수 답변을 `--플래그` **및/또는** `--config <path.json>`으로 제공해야 함
+   - stdin으로도 config 가능: `--config -`
+   - **누락 시 즉시 non-zero exit** (한국어+영어 안내, 예시 명령 제공)
+   - stdin 프롬프트로 **절대 걸리지 않음** (`!process.stdin.isTTY`)
+
+**`-y`/`--yes` 완전 제거:**
+- `parseArgs` options에서 제거
+- `IScaffoldOptions.yes` 필드 제거
+- `runPrompts` 첫 줄 early-return 제거
+- README, AGENTS.md, harness-setup.md, help text, DECISIONS 참조 제거
+- 테스트에서 `yes: true` 사용 제거
+
+**"기본값으로 넘어가기" 탈출구 없음.** 누락 = 에러, aimon 기본값이나 추론 기본값으로 조용히 넘어가지 않음.
+
+### 필수 답변 기준 (현재 `runPrompts` 질문과 1:1 매칭)
+
+- `--mode` (free|inspire|implement)
+- `--agents` (cursor|claude|both)
+- `--modules` (감지 기반 권장이 아니라 명시 필요)
+- React 프로젝트인데 감지 안 되면: `--component-declaration`, `--component-export`
+- 스타일 감지 안 되면: `--styling` (css|css-modules|tailwind)
+- `design-system` 모듈 선택 시: `--storybook` (off|pending)
+- `--ponytail` 명시 (false는 플래그 생략으로 표현 가능, true는 플래그 필수)
+- Figma: 설치 시 **필수 아님** (decision #26). `--figma-url`/`--accept-disclaimer`는 power-user 선택
+
+Partial flags on TTY: 여전히 OK (나머지는 프롬프트).  
+Partial flags on non-TTY: 에러 + 누락 항목 나열.
+
+### `--config <path>` 추가
+
+JSON 파일로 설정 제공. 스키마는 플래그와 1:1 매핑:
+```json
+{
+  "mode": "free",
+  "agents": ["cursor", "claude"],
+  "modules": ["design-system", "lint"],
+  "storybook": "pending",
+  "ponytail": false,
+  "componentDeclaration": "function",
+  "componentExport": "default",
+  "styling": "css-modules",
+  "figmaUrl": "...",
+  "acceptDisclaimer": true
+}
+```
+
+- 플래그가 config보다 우선 (충돌 시)
+- stdin 지원: `--config -`
+- 알 수 없는 키 = 에러 (오타 방지)
+- 유효하지 않은 enum 값 = 에러
+
+### 문서 변경 (올바른 에이전트 경로)
+
+에이전트가 `-y` 없이 설치하는 올바른 패턴:
+1. 채팅에서 설치 질문 (`/harness-setup`, AGENTS.md)
+2. **명시적 플래그 및/또는 `--config`** 로 CLI 재실행 (**`-y` 없음**)
+3. `.harness/config.json` 이미 있으면 재질문 안 함
+
+업데이트 대상:
+- `templates/core/AGENTS.md` — 설치 섹션
+- `templates/core/workflows/harness-setup.md` — CLI 실행 예시
+- `README.md` — TTY vs non-TTY 두 경로, `--config` 설명
+- `DECISIONS.md` — 이 decision #27
+- `TODO.md` — 0.4.4 체크리스트 (있으면)
+
+### 테스트
+
+- `test/scaffold.test.ts`: `yes: true` 사용 제거, 전체 명시적 옵션으로 교체
+- 새 테스트 추가:
+  - non-TTY + 필수 답변 누락 → exit 1 (또는 throw)
+  - non-TTY + 전체 플래그 → OK
+  - `--config` 로드 → 플래그 우선
+  - `-y` 플래그 파싱 시도 → 에러 (또는 unknown option)
+- `npm run check` 통과
+
+### 버전
+
+`package.json` + `package-lock.json`: **0.4.3 → 0.4.4**
+
+npm publish는 PR 병합 후 수동 (자동 배포 없음).
+
+### PR
+
+브랜치 + PR against main. 제목/본문은 한국어 또는 이중 언어 OK.  
+에이전트 행동 변경 요약 (더 이상 `-y` 안 씀, non-TTY는 명시 필수).
+
+### 성공 기준
+
+- 공개 CLI에 `--yes` 없음
+- TTY는 여전히 대화형
+- non-TTY는 절대 무한 대기 안 함
+- 에이전트 문서: 채팅 → 플래그/config로 CLI 실행 (no `-y`)
+- 테스트 통과
+

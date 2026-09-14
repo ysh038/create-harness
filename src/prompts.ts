@@ -32,8 +32,6 @@ export const runPrompts = async (
     defaults: IScaffoldOptions,
     suggestions: IModuleSuggestion[],
 ): Promise<IScaffoldOptions> => {
-    if (defaults.yes) return defaults
-
     p.intro('create-harness')
 
     p.log.info(

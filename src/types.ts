@@ -92,7 +92,6 @@ export interface IScaffoldOptions {
     /** 면책 조항 수락 */
     acceptDisclaimer: boolean
     dryRun: boolean
-    yes: boolean
     install: boolean
 }
 
