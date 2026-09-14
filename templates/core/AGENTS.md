@@ -48,6 +48,26 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
+## 설치·설정 질문이 비어 있을 때
+
+에이전트가 `create-harness-cli`를 실행하려는데 사용자가 답변을 미리 지정하지 않았다면:
+
+1. **CLI 질문 4가지를 먼저 채팅에서 물어본다**:
+   - 대상 에이전트: Cursor and/or Claude Code
+   - 포함 모듈: design-system, auth-http, data-fetching, lint (core는 항상 포함)
+{{#if DESIGN_SYSTEM}}   - Storybook 계획 (design-system 선택 시): 사용 의향 있으면 `pending`, 없으면 `off`
+{{/if}}   - ponytail 설치 여부
+2. 답을 받으면 **명시적 플래그로 CLI를 실행**한다 — `--agents`, `--modules`{{#if DESIGN_SYSTEM}}, `--storybook`{{/if}}, `--ponytail`
+3. `-y/--yes`로 건너뛰지 않는다 (답변이 비어 있으면 기본값이 의도와 다를 수 있다)
+4. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
+{{#if DESIGN_SYSTEM}}
+
+**Storybook 상태별 처리**:
+- `off`: `/ds-init` 실행 전 사용자에게 확인 — 동의 시에만 설치 진행
+- `pending`: 첫 UI 작업 시 `/ds-init` 실행 가능 (확인 권장, 필수 아님)
+- `ready`: 이미 설치됨, 추가 확인 불필요
+{{/if}}
+
 ## 장기 기억 문서
 
 | 파일 | 용도 |
