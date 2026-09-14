@@ -150,66 +150,6 @@ export const runPrompts = async (
         styling = styleChoice
     }
 
-    // 5. Figma 파일 URL (inspire/implement 모드에서만)
-    let figmaUrl: string | undefined
-    let acceptDisclaimer = false
-    if (mode === 'inspire' || mode === 'implement') {
-        p.log.info(
-            [
-                '디자인 참조를 사용하는 모드입니다.',
-                'Figma 파일 URL을 입력하면 에이전트가 디자인 맵에 기록합니다.',
-                '(선택사항 — 나중에 직접 추가할 수도 있습니다)',
-            ].join('\n'),
-        )
-        const figmaInput = await p.text({
-            message: 'Figma 파일 URL (선택, 없으면 엔터)',
-            placeholder: 'https://www.figma.com/file/...',
-            validate: (value) => {
-                if (!value) return undefined
-                if (
-                    !value.startsWith('https://www.figma.com/') &&
-                    !value.startsWith('https://figma.com/')
-                ) {
-                    return 'Figma URL 형식이 아닙니다'
-                }
-                return undefined
-            },
-        })
-        if (p.isCancel(figmaInput)) {
-            p.cancel('취소되었습니다.')
-            process.exit(1)
-        }
-        figmaUrl = figmaInput || undefined
-
-        if (figmaUrl || mode === 'implement') {
-            p.log.warn(
-                [
-                    '',
-                    '⚠️  면책 조항',
-                    '',
-                    '디자인 참조 맵은 사용자의 책임으로 관리됩니다.',
-                    '- Figma 파일에 대한 접근 권한과 라이선스는 사용자 책임입니다',
-                    '- 에이전트는 제공된 링크를 저장만 하며, 라이선스를 검증하지 않습니다',
-                    '- 디자인 저작권·사용 권리는 프로젝트 소유자에게 있습니다',
-                    '',
-                ].join('\n'),
-            )
-            const disclaimerAccept = await p.confirm({
-                message: '위 조건을 이해하고 동의하시나요?',
-                initialValue: false,
-            })
-            if (p.isCancel(disclaimerAccept)) {
-                p.cancel('취소되었습니다.')
-                process.exit(1)
-            }
-            if (!disclaimerAccept) {
-                p.log.error('면책 조항 동의가 필요합니다.')
-                process.exit(1)
-            }
-            acceptDisclaimer = true
-        }
-    }
-
     const agents = await p.multiselect<TAgent>({
         message: '어떤 에이전트를 대상으로 하나요?',
         options: [
@@ -306,7 +246,7 @@ export const runPrompts = async (
             componentExport,
             styling,
         },
-        figmaUrl,
-        acceptDisclaimer,
+        figmaUrl: defaults.figmaUrl,
+        acceptDisclaimer: defaults.acceptDisclaimer,
     }
 }

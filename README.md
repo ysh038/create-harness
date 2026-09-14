@@ -57,7 +57,8 @@ Interactive runs also ask:
 - **Design mode**: free (no design reference) / inspire (redesign allowed) / implement (match Figma closely)
 - **Coding style**: component declaration, export pattern, styling approach
 - **Storybook intent**: `off` / `pending` in `.harness/config.json` (use `/ds-init` later to install and set `ready`)
-- **Figma URL** (optional, for inspire/implement modes): design reference map source
+
+Optional flags for power users (`--figma-url` / `--accept-disclaimer`) skip prompts; interactive install does not ask for Figma URLs at setup.
 
 ## Modules
 

@@ -88,6 +88,21 @@
 - [x] PR 생성 (https://github.com/ysh038/create-harness/pull/7)
 - [ ] npm 배포 create-harness-cli@0.4.2 (PR 병합 후, 수동)
 
+## v0.4.3
+
+- [x] 설치 시 Figma URL 프롬프트 제거 (inspire/implement 모드 포함)
+- [x] `--figma-url` 플래그는 유지 (power user용)
+- [x] mode가 free가 아니면 빈 design-references.json 생성
+- [x] harness-setup 워크플로 업데이트 (Figma URL 질문 제거)
+- [x] AGENTS.md 업데이트 (설치 시 Figma 재질문 제거, /ds-add 시 물어보기)
+- [x] ds-add 워크플로 강조 (있음/없음/나중에)
+- [x] README 업데이트 (--figma-url 선택적)
+- [x] 버전 0.4.3 bump (package.json)
+- [x] DECISIONS.md #26 기록
+- [ ] 테스트 스냅샷 재생성 + 통과 확인
+- [ ] PR 생성
+- [ ] npm 배포 create-harness-cli@0.4.3 (PR 병합 후, 수동)
+
 ## v0.5
 
 - [ ] `node-be` 프리셋

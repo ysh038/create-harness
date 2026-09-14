@@ -509,8 +509,8 @@ export const buildPlan = (
         ...buildModuleActions(detected, options, vars),
     ]
 
-    // design-references.json 생성 (mode가 free가 아니거나 figma URL이 있을 때)
-    if (options.mode !== 'free' || options.figmaUrl) {
+    // design-references.json 생성 (mode가 free가 아닐 때 항상 생성, 빈 맵으로 시작)
+    if (options.mode !== 'free') {
         const designRefs: import('./types.js').IDesignReferences = {
             version: 1,
             mode: options.mode,
