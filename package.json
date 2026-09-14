@@ -1,7 +1,7 @@
 {
     "name": "create-harness-cli",
-    "version": "0.3.0",
-    "description": "Scaffold AI coding agent harness (conventions, verification gates, workflows) onto an existing project — for Cursor and Claude Code.",
+    "version": "0.3.1",
+    "description": "Scaffold an AI coding-agent harness (conventions, verification gates, workflows) onto an existing project \u2014 for Cursor and Claude Code.",
     "type": "module",
     "bin": {
         "create-harness-cli": "dist/cli.js"
@@ -27,11 +27,18 @@
     "keywords": [
         "ai",
         "agent",
+        "agentic",
         "harness",
         "scaffold",
         "cursor",
+        "cursor-ai",
+        "claude",
         "claude-code",
         "agents-md",
+        "react",
+        "vite",
+        "eslint",
+        "storybook",
         "cli"
     ],
     "license": "MIT",

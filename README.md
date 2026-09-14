@@ -1,5 +1,10 @@
 # create-harness
 
+[![npm](https://img.shields.io/npm/v/create-harness-cli.svg)](https://www.npmjs.com/package/create-harness-cli)
+[![downloads](https://img.shields.io/npm/dm/create-harness-cli.svg)](https://www.npmjs.com/package/create-harness-cli)
+[![license](https://img.shields.io/npm/l/create-harness-cli.svg)](./LICENSE)
+
+
 > Drop an AI coding-agent harness onto an existing project — one command.
 
 Not an app scaffolder. `create-harness` installs conventions, verification gates, and workflows so Cursor and Claude Code produce consistent work in a repo you already have.
