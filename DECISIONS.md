@@ -412,3 +412,37 @@ git tag v0.3.0
 git push origin v0.3.0
 npm publish
 ```
+
+## 22. CLI 프롬프트를 에이전트 채팅 경로에 미러링한다 (v0.3.3)
+
+사용자가 에이전트에게 "하네스 설치해줘"라고 요청하면 에이전트는 `--yes` 로 CLI를 건너뛰고
+싶은 유혹이 있지만, `--yes`의 기본값이 사용자 의도와 맞지 않을 수 있다 — 특히 Storybook
+의향(`off` vs `pending`)과 모듈 선택(프로젝트마다 다름)은 추측으로 덮어쓸 수 없다.
+
+그래서 **CLI의 4가지 질문을 에이전트 채팅 경로에서도 그대로 물어본다**:
+
+1. 대상 에이전트 (Cursor and/or Claude Code)
+2. 포함 모듈 (design-system, auth-http, data-fetching, lint)
+3. Storybook 계획 (design-system 선택 시 — `pending` or `off`)
+4. ponytail 설치 여부
+
+답을 받으면 명시적 플래그(`--agents`, `--modules`, `--storybook`, `--ponytail`)로 CLI를 실행한다.
+`-y` 는 쓰지 않는다.
+
+`.harness/config.json` 이 이미 존재하고 해당 필드가 채워져 있으면 재질문하지 않는다 —
+이미 설치된 하네스를 다시 실행하는 경우는 설정 변경 등 명시적 의도가 있을 때뿐이다.
+
+**Storybook `off` 처리**: `/ds-init` 워크플로가 Storybook 설치 전에 `.harness/config.json`의
+`storybook` 필드를 먼저 확인하도록 절차를 수정했다. `off` 이면 사용자에게 지금 켤지 물어보고,
+동의한 경우에만 설치를 계속한다. `pending` 이면 의향이 있다는 뜻이므로 바로 진행 가능
+(간단히 확인 권장, 필수 아님). `ready` 면 이미 설치됨.
+
+문서 변경:
+- `templates/core/AGENTS.md`: "설치·설정 질문이 비어 있을 때" 절 추가 (짧게, AGENTS.md는 간결 유지)
+- `templates/core/workflows/ds-init.md`: 절차 첫머리에 Storybook 의향 확인 단계 추가
+- `templates/core/workflows/harness-setup.md`: 새 워크플로 생성 — 에이전트가 하네스 설치 시 실행
+- `src/registry.ts`: `BASE_WORKFLOWS` 에 `harness-setup` 등록 (Cursor command + Claude skill)
+
+이번 변경은 **질문 미러링만** 다룬다. 프로젝트 모드(free/inspire/implement), Figma 디자인
+참조 맵, 코딩 스타일 선호(function/arrow) 등의 설문 추가는 별도 범위다.
+

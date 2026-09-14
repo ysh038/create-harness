@@ -159,7 +159,7 @@ const buildRuleActions = (
             }
         })
 
-const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship']
+const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship', 'harness-setup']
 // ds-init·ds-add는 Claude에서 design-system 스킬 하나로 합쳐진다 (설치·추가는 한 흐름)
 const DESIGN_SYSTEM_SETUP_WORKFLOWS = ['ds-init', 'ds-add']
 // ux-review는 목적이 달라(진행 중인 UI 품질 리뷰) 독립 스킬로 둔다
