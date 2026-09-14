@@ -51,6 +51,11 @@ a11y: {
 { "id": "test-storybook", "command": "{{PM_EXEC}} vitest --project=storybook --run" }
 ```
 
+   같은 파일에서 `storybook` 필드를 `"ready"` 로 올린다 (`off`/`pending` → `ready`).
+   설치 전부터 있던 컴포넌트 중 스토리가 없는 것이 있으면
+   `.harness/stories-baseline.json` 에 경로 목록을 스냅샷한다 (브라운필드 유예 —
+   새 컴포넌트만 스토리 없음을 error로 취급할 때 기준점).
+
 6. **계층 폴더 스켈레톤 생성**: Atomic 계층을 폴더로 고정한다
    (계층 정의는 `{{RULES_DIR}}/30-design-system`).
 
@@ -85,4 +90,6 @@ options: {
 
 - `.storybook/` 존재, a11y test = 'error', storySort 적용
 - checks에 storybook 테스트 등록
+- `.harness/config.json` 의 `storybook` 이 `"ready"`
+- (해당 시) `.harness/stories-baseline.json` 스냅샷
 - `atoms` / `molecules` / `organisms` / `layouts` 폴더와 계층 예제 + 스토리

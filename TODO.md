@@ -21,7 +21,7 @@
 - [x] npm 이름 충돌 발견 및 해결 — `create-harness`는 무관한 기존 패키지(uiharness)가
   선점 중이라 `npx create-harness`가 그 패키지를 실행하고 있었다. `create-harness-cli`로
   개명 (`package.json` name·bin, `src/cli.ts` 도움말, README). 근거: `DECISIONS.md` #13
-- [ ] npm 배포 (`npm publish`) — 배포 전 `npm pack` 산출물 최종 검토
+- [x] npm 배포 (`npm publish`) — v0.2.2 배포 완료; v0.3.0 은 이 릴리스에서 배포
 
 ## v0.2
 
@@ -43,6 +43,7 @@
 
 ## v0.3
 
+- [ ] npm 배포 create-harness-cli@0.3.0 (+ git tag `v0.3.0`)
 - [x] Storybook Option A — 설치 시 의향 질문, config에 상태 기록 (`off` | `pending` | `ready`)
 - [x] Brownfield Atomic baseline — 기존 페이지 raw JSX 유예 목록 (`.harness/atomic-baseline.json`)
 - [x] 페이지 raw JSX 금지 ESLint 규칙 — intrinsic elements 직접 사용 error (유예 파일은 warning)

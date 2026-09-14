@@ -40,6 +40,8 @@ npx create-harness-cli [dir] [options]
 -y, --yes           skip prompts
 ```
 
+Interactive runs also ask whether you plan to use Storybook (`off` / `pending` in `.harness/config.json`). Use `/ds-init` later to install and set `ready`.
+
 ## Modules
 
 Core (rules, workflows, gates, docs) always installs. Code-generating modules default **on only when they will compile and pass checks on the target**:
