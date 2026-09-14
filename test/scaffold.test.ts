@@ -55,7 +55,6 @@ const fullOptions = (targetDir: string): IScaffoldOptions => ({
     },
     acceptDisclaimer: false,
     dryRun: false,
-    yes: true,
     install: false,
 })
 
@@ -584,4 +583,57 @@ describe('npm 패키지 경계', () => {
             paths.some((filePath) => filePath.startsWith('templates/')),
         ).toBe(true)
     }, 30000)
+})
+
+describe('non-TTY 필수 답변 검증', () => {
+    let tmp: string
+
+    afterEach(() => {
+        if (tmp) rmSync(tmp, { recursive: true, force: true })
+    })
+
+    it('non-TTY에서 --agents 누락 시 에러 (modules/mode는 제공됨)', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+        writeFileSync(
+            path.join(tmp, 'package.json'),
+            JSON.stringify({ name: 'test-app' }),
+        )
+
+        // non-TTY 환경 시뮬레이션: stdin을 닫음
+        let stderr = ''
+        try {
+            execSync(
+                `node ${path.resolve(__dirname, '../dist/cli.js')} ${tmp} --mode free --modules lint --dry-run`,
+                {
+                    encoding: 'utf-8',
+                    stdio: ['ignore', 'pipe', 'pipe'],
+                    env: { ...process.env, CI: '1' },
+                },
+            )
+        } catch (err: unknown) {
+            stderr = (err as { stderr?: string }).stderr ?? ''
+        }
+
+        expect(stderr).toContain('--agents')
+        expect(stderr).toContain('Missing required answers')
+    })
+
+    it('non-TTY에서 모든 필수 답변 제공 시 성공', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+        writeFileSync(
+            path.join(tmp, 'package.json'),
+            JSON.stringify({ name: 'test-app' }),
+        )
+
+        const output = execSync(
+            `node ${path.resolve(__dirname, '../dist/cli.js')} ${tmp} --mode free --agents cursor --modules lint --component-export default --styling css --dry-run`,
+            {
+                encoding: 'utf-8',
+                stdio: ['ignore', 'pipe', 'pipe'],
+                env: { ...process.env, CI: '1' },
+            },
+        )
+
+        expect(output).toContain('done')
+    })
 })

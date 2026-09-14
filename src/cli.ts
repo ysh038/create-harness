@@ -29,6 +29,21 @@ const VALID_MODULES: TModule[] = [
     'lint',
 ]
 
+interface IConfigFile {
+    mode?: 'free' | 'inspire' | 'implement'
+    agents?: TAgent[]
+    modules?: TModule[]
+    storybook?: 'off' | 'pending'
+    ponytail?: boolean
+    componentDeclaration?: 'function' | 'arrow'
+    componentExport?: 'default' | 'named'
+    styling?: 'css' | 'css-modules' | 'tailwind'
+    figmaUrl?: string
+    acceptDisclaimer?: boolean
+    dryRun?: boolean
+    install?: boolean
+}
+
 const getOwnVersion = (): string => {
     const pkgPath = path.resolve(
         path.dirname(fileURLToPath(import.meta.url)),
@@ -75,7 +90,7 @@ const main = async (): Promise<void> => {
             'figma-url': { type: 'string' },
             'accept-disclaimer': { type: 'boolean', default: false },
             'dry-run': { type: 'boolean', default: false },
-            yes: { type: 'boolean', short: 'y', default: false },
+            config: { type: 'string' },
             install: { type: 'boolean', default: false },
             help: { type: 'boolean', short: 'h', default: false },
             version: { type: 'boolean', short: 'v', default: false },
@@ -103,10 +118,14 @@ const main = async (): Promise<void> => {
   --figma-url <url>              Figma 파일 URL (선택)
   --accept-disclaimer            디자인 참조 면책 조항 수락
   --dry-run                      파일을 쓰지 않고 계획만 출력
-  -y, --yes                      질문 없이 진행 (명시적 플래그와 함께 쓰면 해당 값 사용)
+  --config <path>                설정 JSON 파일 (플래그가 config보다 우선)
   --install                      필요한 devDependency 설치 명령까지 출력 후 실행 안내
   -h, --help                     도움말
-  -v, --version                  버전`)
+  -v, --version                  버전
+
+TTY 경로: 대화형 프롬프트로 설치 옵션 결정
+Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --config로 제공해야 함
+  (누락 시 에러)`)
         return
     }
 
@@ -126,12 +145,57 @@ const main = async (): Promise<void> => {
         process.exit(1)
     }
 
+    // --config 파일 로드 (있으면)
+    let configFile: IConfigFile = {}
+    if (values.config) {
+        try {
+            const configPath =
+                values.config === '-'
+                    ? '/dev/stdin'
+                    : path.resolve(values.config)
+            const raw = readFileSync(configPath, 'utf-8')
+            configFile = JSON.parse(raw) as IConfigFile
+
+            // 알 수 없는 키 검증
+            const validKeys = new Set([
+                'mode',
+                'agents',
+                'modules',
+                'storybook',
+                'ponytail',
+                'componentDeclaration',
+                'componentExport',
+                'styling',
+                'figmaUrl',
+                'acceptDisclaimer',
+                'dryRun',
+                'install',
+            ])
+            for (const key of Object.keys(configFile)) {
+                if (!validKeys.has(key)) {
+                    console.error(
+                        `알 수 없는 config 키: "${key}"\n가능한 키: ${Array.from(validKeys).join(', ')}`,
+                    )
+                    process.exit(1)
+                }
+            }
+        } catch (err) {
+            console.error(`config 파일을 읽을 수 없습니다: ${String(err)}`)
+            process.exit(1)
+        }
+    }
+
     const suggestions = suggestModules(detected)
     const explicitModules = parseCsv(values.modules, VALID_MODULES, 'module')
 
     // mode 검증
-    const explicitMode = values.mode as 'free' | 'inspire' | 'implement' | undefined
-    if (explicitMode && !['free', 'inspire', 'implement'].includes(explicitMode)) {
+    const explicitMode =
+        (values.mode as 'free' | 'inspire' | 'implement' | undefined) ??
+        configFile.mode
+    if (
+        explicitMode &&
+        !['free', 'inspire', 'implement'].includes(explicitMode)
+    ) {
         console.error(
             `알 수 없는 mode: "${explicitMode}" (가능한 값: free, inspire, implement)`,
         )
@@ -139,22 +203,31 @@ const main = async (): Promise<void> => {
     }
 
     // 스타일 옵션 검증
-    const declType = values['component-declaration'] as 'function' | 'arrow' | undefined
+    const declType =
+        (values['component-declaration'] as 'function' | 'arrow' | undefined) ??
+        configFile.componentDeclaration
     if (declType && !['function', 'arrow'].includes(declType)) {
         console.error(
             `알 수 없는 component-declaration: "${declType}" (가능한 값: function, arrow)`,
         )
         process.exit(1)
     }
-    const exportType = values['component-export'] as 'default' | 'named' | undefined
+    const exportType =
+        (values['component-export'] as 'default' | 'named' | undefined) ??
+        configFile.componentExport
     if (exportType && !['default', 'named'].includes(exportType)) {
         console.error(
             `알 수 없는 component-export: "${exportType}" (가능한 값: default, named)`,
         )
         process.exit(1)
     }
-    const stylingType = values.styling as 'css' | 'css-modules' | 'tailwind' | undefined
-    if (stylingType && !['css', 'css-modules', 'tailwind'].includes(stylingType)) {
+    const stylingType =
+        (values.styling as 'css' | 'css-modules' | 'tailwind' | undefined) ??
+        configFile.styling
+    if (
+        stylingType &&
+        !['css', 'css-modules', 'tailwind'].includes(stylingType)
+    ) {
         console.error(
             `알 수 없는 styling: "${stylingType}" (가능한 값: css, css-modules, tailwind)`,
         )
@@ -163,32 +236,38 @@ const main = async (): Promise<void> => {
 
     // --storybook 검증: off|pending만 허용 (ready는 설치 시점에 불가)
     let explicitStorybook: 'off' | 'pending' | undefined = undefined
-    if (values.storybook !== undefined) {
-        if (values.storybook !== 'off' && values.storybook !== 'pending') {
+    const storybookFromArg = values.storybook ?? configFile.storybook
+    if (storybookFromArg !== undefined) {
+        if (storybookFromArg !== 'off' && storybookFromArg !== 'pending') {
             console.error(
-                `--storybook 는 'off' 또는 'pending' 만 허용합니다 (받은 값: ${values.storybook})`,
+                `--storybook 는 'off' 또는 'pending' 만 허용합니다 (받은 값: ${storybookFromArg})`,
             )
             process.exit(1)
         }
-        explicitStorybook = values.storybook as 'off' | 'pending'
+        explicitStorybook = storybookFromArg as 'off' | 'pending'
     }
+
+    // ponytail (플래그 우선, config fallback)
+    const ponytailValue = values.ponytail ?? configFile.ponytail ?? false
 
     const defaults: IScaffoldOptions = {
         targetDir,
         preset: 'react-fe',
-        agents: parseCsv(values.agents, VALID_AGENTS, 'agent') ?? [
-            'cursor',
-            'claude',
-        ],
+        agents:
+            parseCsv(values.agents, VALID_AGENTS, 'agent') ??
+            configFile.agents ??
+            ['cursor', 'claude'],
         // --modules 를 주지 않으면 감지 결과가 기본값을 정한다
-        modules: explicitModules ?? recommendedModules(detected),
-        ponytail: values.ponytail ?? false,
+        modules:
+            explicitModules ?? configFile.modules ?? recommendedModules(detected),
+        ponytail: ponytailValue,
         // 명시적 --storybook 이 있으면 그걸 쓰고, 없으면 design-system 선택 여부로 추론
         storybook:
             explicitStorybook ??
-            ((explicitModules ?? recommendedModules(detected)).includes(
-                'design-system',
-            )
+            ((explicitModules ??
+                configFile.modules ??
+                recommendedModules(detected)
+            ).includes('design-system')
                 ? 'pending'
                 : 'off'),
         mode: explicitMode ?? 'free',
@@ -211,16 +290,88 @@ const main = async (): Promise<void> => {
                       ? 'css-modules'
                       : 'css',
         },
-        figmaUrl: values['figma-url'],
-        acceptDisclaimer: values['accept-disclaimer'],
-        dryRun: values['dry-run'],
-        yes: values.yes,
-        install: values.install,
+        figmaUrl: values['figma-url'] ?? configFile.figmaUrl,
+        acceptDisclaimer:
+            values['accept-disclaimer'] ?? configFile.acceptDisclaimer ?? false,
+        dryRun: values['dry-run'] ?? configFile.dryRun ?? false,
+        install: values.install ?? configFile.install ?? false,
     }
 
-    const options = await runPrompts(detected, defaults, suggestions)
+    // TTY 체크: interactive vs explicit-only
+    const isTTY = process.stdin.isTTY === true
 
-    // 감지 때문에 빠진 모듈은 이유를 남긴다 (--yes 로 프롬프트를 건너뛴 경우 특히)
+    if (!isTTY) {
+        // Non-TTY: 모든 필수 답변 검증
+        const missing: string[] = []
+
+        if (!explicitMode && !configFile.mode) {
+            missing.push('--mode (free|inspire|implement)')
+        }
+        if (!values.agents && !configFile.agents) {
+            missing.push('--agents (cursor|claude)')
+        }
+        if (!explicitModules && !configFile.modules) {
+            missing.push('--modules (design-system,auth-http,data-fetching,lint)')
+        }
+
+        // React 프로젝트이고 스타일이 감지되지 않은 경우 --styling 필수
+        if (detected.isReact && !declType && !configFile.componentDeclaration) {
+            missing.push('--component-declaration (function|arrow)')
+        }
+        if (!exportType && !configFile.componentExport) {
+            missing.push('--component-export (default|named)')
+        }
+        if (
+            !stylingType &&
+            !detected.hasTailwind &&
+            !detected.hasCssInJs &&
+            !detected.hasCssModules
+        ) {
+            missing.push('--styling (css|css-modules|tailwind)')
+        }
+
+        // design-system 모듈 선택 시 --storybook 필수
+        if (defaults.modules.includes('design-system') && !explicitStorybook) {
+            missing.push('--storybook (off|pending)')
+        }
+
+        if (missing.length > 0) {
+            console.error(
+                pc.red(
+                    '\n❌ Non-TTY 경로: 모든 필수 답변을 CLI 플래그 또는 --config로 제공해야 합니다.\n',
+                ) +
+                    '\n누락된 항목:\n' +
+                    missing.map((m) => `  - ${m}`).join('\n') +
+                    '\n\n예시 명령:\n' +
+                    pc.dim(
+                        `  npx create-harness-cli ${targetDir} --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function --component-export default\n`,
+                    ) +
+                    '\n또는 설정 파일 사용:\n' +
+                    pc.dim(`  npx create-harness-cli ${targetDir} --config config.json\n`),
+            )
+            console.error(
+                '\n' +
+                    pc.yellow(
+                        '⚠️  Missing required answers in non-TTY environment.\n',
+                    ) +
+                    '\nMissing:\n' +
+                    missing.map((m) => `  - ${m}`).join('\n') +
+                    '\n\nExample command:\n' +
+                    pc.dim(
+                        `  npx create-harness-cli ${targetDir} --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function --component-export default\n`,
+                    ) +
+                    '\nOr use config file:\n' +
+                    pc.dim(`  npx create-harness-cli ${targetDir} --config config.json\n`),
+            )
+            process.exit(1)
+        }
+    }
+
+    const options = isTTY
+        ? await runPrompts(detected, defaults, suggestions)
+        : defaults
+
+    // 감지 때문에 빠진 모듈은 이유를 남긴다
     const excluded = suggestions.filter(
         (suggestion) =>
             !suggestion.isRecommended &&

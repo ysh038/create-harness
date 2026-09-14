@@ -23,7 +23,7 @@ description: Interactive harness installation workflow for agents - mirrors CLI 
    **Q2. 코딩 스타일**
    - 컴포넌트 선언: `function` | `arrow` (`--component-declaration`)
    - export: `default` | `named` (`--component-export`)
-   - 스타일: 감지되면 그대로, 애매하면 `css-modules` | `tailwind` (`--styling`)
+   - 스타일: 감지되면 그대로, 애매하면 `css` | `css-modules` | `tailwind` (`--styling`)
 
    **Q3. 대상 에이전트**
    - Cursor and/or Claude Code
@@ -37,24 +37,24 @@ description: Interactive harness installation workflow for agents - mirrors CLI 
    **Q6. ponytail**
    - yes/no (`--ponytail`)
 
-2. **답변을 받으면 명시적 플래그와 함께 `-y`로 CLI 실행**:
+2. **답변을 받으면 명시적 플래그와 함께 CLI 실행**:
 
 ```bash
 {{PM_EXEC}} create-harness-cli <project-path> \
   --mode <free|inspire|implement> \
   --component-declaration <function|arrow> \
   --component-export <default|named> \
-  --styling <css-modules|tailwind> \
+  --styling <css|css-modules|tailwind> \
   --agents <cursor|claude|cursor,claude> \
   --modules <모듈1,모듈2,...> \
   --storybook <off|pending> \
-  --ponytail \
-  -y
+  --ponytail
 ```
 
    **중요**:
-   - 채팅에서 물은 값을 플래그로 넣고 `-y`를 쓴다 ("이 값 쓰고 다시 묻지 마")
-   - 값 없이 `-y`만 쓰지 않는다
+   - 채팅에서 물은 값을 플래그로 넣는다
+   - **모든 필수 답변을 제공** (non-TTY 환경에서 누락 시 에러)
+   - 또는 `--config config.json` 으로 설정 파일 사용
    - `--storybook` / `--ponytail` 은 해당될 때만
 
 3. **설치 완료 후**:

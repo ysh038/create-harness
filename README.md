@@ -15,10 +15,15 @@ Published on npm as [`create-harness-cli`](https://www.npmjs.com/package/create-
 
 ```bash
 npx create-harness-cli
-npx create-harness-cli ./my-app --yes --dry-run
+npx create-harness-cli ./my-app --dry-run
 ```
 
 Requires Node.js 20+.
+
+### Interactive vs explicit paths
+
+- **TTY (interactive)**: prompts walk you through every decision
+- **Non-TTY / automation**: all required answers must be provided via `--flags` or `--config <path.json>`. Missing answers = immediate error (never hangs on stdin)
 
 ## What you get
 
@@ -46,11 +51,11 @@ npx create-harness-cli [dir] [options]
 --mode <mode>                  free|inspire|implement (default: free)
 --component-declaration <type> function|arrow (default: function)
 --component-export <type>      default|named (default: default)
---styling <type>               css-modules|tailwind (when not detected)
+--styling <type>               css|css-modules|tailwind (when not detected)
 --figma-url <url>              Figma file URL (optional)
 --accept-disclaimer            design reference liability disclaimer
 --dry-run                      print the plan without writing
--y, --yes                      skip prompts
+--config <path>                load settings from JSON file (flags override config)
 ```
 
 Interactive runs also ask:
@@ -59,6 +64,25 @@ Interactive runs also ask:
 - **Storybook intent**: `off` / `pending` in `.harness/config.json` (use `/ds-init` later to install and set `ready`)
 
 Optional flags for power users (`--figma-url` / `--accept-disclaimer`) skip prompts; interactive install does not ask for Figma URLs at setup.
+
+### Config file format (--config)
+
+JSON file matching CLI flags:
+
+```json
+{
+  "mode": "free",
+  "agents": ["cursor", "claude"],
+  "modules": ["design-system", "lint"],
+  "storybook": "pending",
+  "ponytail": false,
+  "componentDeclaration": "function",
+  "componentExport": "default",
+  "styling": "css-modules"
+}
+```
+
+Flags override config when both are present. You can also pass config via stdin: `--config -`
 
 ## Modules
 
@@ -85,7 +109,7 @@ Use `--modules` to force inclusion. Dropping a module also drops the rules and w
 
 ```bash
 npm run check
-npm run dev -- <target> --yes --dry-run
+npm run dev -- <target> --dry-run
 ```
 
 - `templates/` — files copied into target projects
