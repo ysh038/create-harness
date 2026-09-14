@@ -37,6 +37,10 @@ description: Register design sources and manage the design reference map for Fig
 
 1. 코드 경로를 물어본다 (예: `src/design-system/atoms/Button/Button.tsx`)
 2. Figma URL을 물어본다 (전체 URL 또는 노드 ID만)
+   
+   **올바른 화면 노드 필요**: `implement` 모드에서 정확한 구현을 위해서는 **올바른 화면/컴포넌트 노드**가
+   필요하다. 잘못된 노드(상위 페이지, 다른 variant)를 링크하면 구현이 어긋난다.
+   이미 잘못 링크한 경우 `status: 'waived'` 로 변경하거나 올바른 URL로 다시 링크한다.
 3. `entries` 배열에 항목 추가 또는 업데이트:
    ```json
    {
