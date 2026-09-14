@@ -126,24 +126,28 @@ export const runPrompts = async (
 
     // 4. 코딩 스타일 — 스타일링 (감지되지 않은 경우에만)
     let styling: TStyling = defaults.style.styling
-    if (!detected.hasTailwind && !detected.hasCssInJs) {
+    if (detected.hasTailwind) {
+        styling = 'tailwind'
+    } else if (detected.hasCssInJs) {
+        styling = 'detected'
+    } else if (detected.hasCssModules) {
+        styling = 'css-modules'
+    } else {
+        // Tailwind, CSS-in-JS, CSS Modules 모두 감지되지 않음 — 물어봄
         const styleChoice = (await p.select({
             message: '스타일을 어떻게 작성하나요?',
             options: [
+                { value: 'css', label: '일반 CSS (App.css, index.css 등)' },
                 { value: 'css-modules', label: 'CSS Modules (.module.css)' },
                 { value: 'tailwind', label: 'Tailwind CSS (유틸리티 클래스)' },
             ],
-            initialValue: styling === 'detected' ? 'css-modules' : styling,
+            initialValue: styling === 'detected' ? 'css' : styling,
         })) as TStyling
         if (p.isCancel(styleChoice)) {
             p.cancel('취소되었습니다.')
             process.exit(1)
         }
         styling = styleChoice
-    } else if (detected.hasTailwind) {
-        styling = 'tailwind'
-    } else {
-        styling = 'detected'
     }
 
     // 5. Figma 파일 URL (inspire/implement 모드에서만)
@@ -224,12 +228,19 @@ export const runPrompts = async (
         suggestions.map((suggestion) => [suggestion.module, suggestion]),
     )
 
+    p.log.info(
+        [
+            '모듈 선택 기준: 설치 직후 컴파일·검증을 통과할 수 있는 모듈만 기본 선택됩니다.',
+            '비권장 모듈을 포함하면 필요한 의존성이 없어 컴파일이 깨질 수 있습니다.',
+        ].join('\n'),
+    )
+
     const modules = await p.multiselect<TModule>({
         message:
             '어떤 모듈을 포함하나요? (코어 규칙·워크플로·게이트는 항상 포함)',
         options: MODULE_ORDER.map((module) => {
             const suggestion = suggestionByModule.get(module)
-            const mark = suggestion?.isRecommended ? '' : ' (비권장)'
+            const mark = suggestion?.isRecommended ? '' : ' ⚠️  비권장'
             return {
                 value: module,
                 label: `${module}${mark}`,

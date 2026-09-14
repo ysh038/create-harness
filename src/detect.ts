@@ -28,6 +28,32 @@ const CSS_IN_JS_PACKAGES = [
     '@vanilla-extract/css',
 ]
 
+/** src/ 안에 .module.css / .module.scss 파일이 있는지 감지 */
+const hasCssModules = (targetDir: string): boolean => {
+    const srcDir = path.join(targetDir, 'src')
+    if (!existsSync(srcDir)) return false
+
+    const walk = (dir: string): boolean => {
+        try {
+            const entries = readdirSync(dir, { withFileTypes: true })
+            for (const entry of entries) {
+                if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+                const full = path.join(dir, entry.name)
+                if (entry.isDirectory()) {
+                    if (walk(full)) return true
+                } else if (entry.name.endsWith('.module.css') || entry.name.endsWith('.module.scss')) {
+                    return true
+                }
+            }
+        } catch {
+            // 읽을 수 없는 디렉터리 무시
+        }
+        return false
+    }
+
+    return walk(srcDir)
+}
+
 /** 선언부의 색상 원시값 — 토큰 강제를 곧바로 error로 켰을 때 걸릴 것들 */
 const RAW_COLOR_PATTERN =
     /(?:color|fill|stroke|background|border-color|outline-color)[^;{}]*:[^;{}]*(#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\()/
@@ -193,6 +219,7 @@ export const detect = (targetDir: string): IDetectResult => {
         hasZustand: 'zustand' in deps,
         hasTailwind: 'tailwindcss' in deps,
         hasCssInJs: CSS_IN_JS_PACKAGES.some((pkg) => pkg in deps),
+        hasCssModules: hasCssModules(targetDir),
         hasEslintFlatConfig: ESLINT_FLAT_CONFIG_CANDIDATES.some((candidate) =>
             existsSync(path.join(targetDir, candidate)),
         ),

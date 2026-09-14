@@ -595,3 +595,92 @@ CLI를 재실행할 필요가 없다 (decision #18과 동일 패턴).
 **왜 에이전트가 맵을 관리?**
 JSON을 손으로 편집하게 하면 형식 오류·중복 id·status 불일치가 쌓인다. 
 에이전트가 URL만 받아 맵을 업데이트하면, 사용자는 Figma에서 복사-붙여넣기만 하면 된다.
+
+## 24. v0.4.1 — Dogfood findings 반영 (Example* naming, styling 감지, Figma 우선)
+
+실제 사용(dogfooding)에서 발견한 문제점 4가지를 수정한다:
+
+### 1. Example* 접두사로 참조 구현과 제품 컴포넌트 분리
+
+`/ds-init`이 만드는 참조 구현 컴포넌트(`Button`, `FormField`, `Form`, `Layout`)가
+실제 제품 컴포넌트와 **이름이 충돌**했다. 제품에서 `Button`을 만들려는데 이미 
+예제 `Button`이 있어서 덮어쓰거나 이름을 바꿔야 하는 상황이 반복됐다.
+
+해법: 참조 구현 컴포넌트는 **항상 `Example*` 접두사**를 쓴다 
+(`ExampleButton`, `ExampleFormField`, `ExampleForm`, `ExampleLayout`).
+스토리 title도 `Atoms/ExampleButton` 처럼 Example*으로 통일해 Storybook 사이드바에서
+제품 컴포넌트와 섞이지 않게 한다.
+
+대상 파일:
+- `templates/core/workflows/ds-init.md` — 절차 8번(참조 구현 생성)에 Example* 명명 명시
+- `templates/core/workflows/ds-add.md` — 제품 스토리는 실제 사용 변형을 포함해야 한다는 안내 추가
+
+### 2. `styling` 감지 개선 — CSS Modules 실제 감지, 명시적 기본값
+
+**기존 문제**: Tailwind·CSS-in-JS가 없으면 CLI가 조용히 `css-modules`를 기본값으로 
+설정했다. 실제로 프로젝트에 `.module.css` 파일이 하나도 없고 `App.css`·`index.css`만 
+있어도 `css-modules`로 설정돼 혼란을 줬다.
+
+**변경 사항**:
+1. `src/detect.ts`에 `hasCssModules()` 함수 추가 — src/ 안에 `.module.css` / `.module.scss` 
+   파일이 실제로 있는지 스캔
+2. 감지 순서: Tailwind → CSS-in-JS → CSS Modules → **plain CSS** (새 타입)
+3. 대화형 프롬프트: Tailwind·CSS-in-JS·CSS Modules 모두 감지 안 되면 세 선택지 제공
+   (`css`, `css-modules`, `tailwind`)
+4. `--yes` 기본값: Tailwind이나 CSS-in-JS나 CSS Modules가 감지되지 않으면 `css` (명시적)
+5. `src/types.ts`: `TStyling`에 `'css'` 타입 추가, `IDetectResult`에 `hasCssModules` 필드 추가
+6. CLI `--styling` 플래그: `css|css-modules|tailwind` 세 값 허용
+
+이제 "CSS Modules 없는 프로젝트에 css-modules가 기본값으로 들어간다"는 버그가 사라진다.
+
+### 3. `implement`/`inspire` 모드에서 Figma 변수를 브랜드 토큰 질문보다 먼저
+
+**기존 문제**: `/ds-init`이 브랜드 토큰(`--primitive-primary-*`)을 물어볼 때 사용자 입력만 
+받았다. 이미 Figma 파일에 변수(variables)로 브랜드 색상이 정의돼 있어도 **무시하고** 
+다시 물어봐서 수동 입력을 강제했다.
+
+**변경 사항**:
+`templates/core/workflows/ds-init.md` 절차 2번(브랜드 토큰 확인) 수정:
+- 모드가 `implement` 또는 `inspire`이고 `.harness/design-references.json`에 Figma 소스가 있으면:
+  1. 먼저 사용자 MCP로 Figma 파일의 variables / design context 읽기 시도
+  2. primary/brand 색상 램프를 찾아 `--primitive-primary-*` 10단계로 매핑
+  3. 변수를 찾을 수 없거나 MCP 없으면 기존 수동 질문으로 fallback
+- `free` 모드이거나 Figma 소스 없으면: 기존 수동 질문 그대로
+
+이제 Figma를 이미 연결한 프로젝트는 브랜드 색상을 자동으로 가져올 수 있다 
+(Figma MCP 사용 가능 시). 사용자 경험 개선.
+
+### 4. 제품 컴포넌트 스토리는 실제 사용 변형을 포함해야 한다는 안내
+
+**발견한 문제**: 제품 컴포넌트(`Button`, `TextField`)의 스토리가 기본 예제만 있고, 
+실제 화면에서 쓰이는 변형(예: Login 화면의 fullWidth Button + size="large")은 스토리에 없었다. 
+결과적으로 "스토리는 통과하지만 실제 페이지는 깨진" 상황이 반복됐다.
+
+**변경 사항**:
+`templates/core/workflows/ds-add.md`에 다음 안내 추가:
+- Example* 참조 구현과 달리, 제품 컴포넌트의 스토리는 실제 화면에서 쓰이는 조합을 보여줘야 함
+- "기본 예제만 있고 실제 쓰이는 조합은 스토리에 없다"면 변형 검증이 안 됨
+- 새 화면을 만들 때 기존 컴포넌트의 variant/prop이 충분한지 스토리를 먼저 확인
+
+이건 규칙이 아니라 **워크플로 지침**이라 강제는 안 하지만, 에이전트가 `/ds-add` 실행 시 
+상기하게 된다.
+
+### 추가 개선 (SHOULD 항목)
+
+#### 모듈 선택 UX 개선
+`src/prompts.ts`에서 모듈 multiselect 전에 안내문 추가:
+- "모듈 선택 기준: 설치 직후 컴파일·검증을 통과할 수 있는 모듈만 기본 선택됩니다."
+- "비권장 모듈을 포함하면 필요한 의존성이 없어 컴파일이 깨질 수 있습니다."
+- 비권장 항목에 `⚠️` 이모지 추가 (`(비권장)` → `⚠️ 비권장`)
+
+#### Machine path 노트 (README)
+README 끝에 짧은 노트 추가:
+- 로컬 Mac 경로(`/Users/...`)로 CLI를 실행하려면 machine-targeted 도구나 parent 에이전트 필요
+- Cloud Agent sandbox executor는 로컬 machine path를 직접 볼 수 없을 수 있음
+
+이 노트는 Cloud Agent가 `/Users/...` 경로로 CLI를 실행하려다 실패하는 상황을 미리 설명한다.
+
+### 결론
+
+v0.4.1은 대상 프로젝트 산출물 개선(Example* naming, Figma 우선), 감지 로직 수정(CSS Modules vs plain CSS), 
+워크플로 지침 명확화(제품 스토리)를 포함한다. npm 배포는 PR 병합 후 수동 실행.

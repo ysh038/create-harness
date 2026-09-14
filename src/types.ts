@@ -20,6 +20,8 @@ export interface IDetectResult {
     /** Tailwind·CSS-in-JS 는 stylelint 토큰 강제가 무의미하거나 어긋난다 */
     hasTailwind: boolean
     hasCssInJs: boolean
+    /** src/ 안에 .module.css / .module.scss 파일이 있는지 */
+    hasCssModules: boolean
     /** 하네스 lint 조각은 flat config 전용 */
     hasEslintFlatConfig: boolean
     /** 발견된 flat config 파일명 (ignores 자동 패치 대상) */
@@ -52,7 +54,7 @@ export type TDesignMode = 'free' | 'inspire' | 'implement'
 export type TFidelity = 'inspire' | 'match' | 'strict' | null
 export type TComponentDeclaration = 'function' | 'arrow'
 export type TComponentExport = 'default' | 'named'
-export type TStyling = 'css-modules' | 'tailwind' | 'detected'
+export type TStyling = 'css-modules' | 'tailwind' | 'css' | 'detected'
 
 export interface ICodingStyle {
     componentDeclaration: TComponentDeclaration

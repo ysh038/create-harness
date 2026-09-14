@@ -63,6 +63,18 @@
 - [ ] 테스트 스냅샷 재생성 + 통과 확인
 - [ ] npm 배포 create-harness-cli@0.4.0 (PR 병합 후)
 
+## v0.4.1
+
+- [x] `/ds-init` example naming — Example* 접두사로 제품 컴포넌트와 충돌 방지
+- [x] `styling` 감지 개선 — CSS Modules 실제 감지, plain CSS 기본값 명시
+- [x] `implement`/`inspire` 모드에서 Figma 변수를 브랜드 토큰 질문보다 먼저
+- [x] 제품 스토리는 실제 사용 변형 포함해야 한다는 안내 추가
+- [x] 모듈 선택 UX 개선 (비권장 경고 명확화)
+- [x] Machine path 노트 (README)
+- [x] DECISIONS.md #24 기록
+- [ ] 테스트 스냅샷 재생성 + 통과 확인
+- [ ] npm 배포 create-harness-cli@0.4.1 (PR 병합 후, 수동)
+
 ## v0.5
 
 - [ ] `node-be` 프리셋

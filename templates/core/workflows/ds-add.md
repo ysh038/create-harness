@@ -49,6 +49,12 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
    - `<Name>.stories.tsx` — `src/design-system/_story-template.tsx` 형식을 따르고
      `title` 은 계층 그대로(`Atoms/Button`), **play 함수 필수**:
      주요 상호작용(클릭·입력)과 포커스·aria 상태를 단정한다
+     
+     **제품 컴포넌트 스토리는 실제 사용 변형을 포함해야 한다:**
+     - Example* 참조 구현과 달리, 제품 컴포넌트(Button, TextField 등)의 스토리는
+       실제 화면에서 쓰이는 조합을 보여준다(예: Login 화면에서 fullWidth Button + size="large")
+     - "기본 예제만 있고 실제 쓰이는 조합은 스토리에 없다"면 변형 검증이 안 된다
+     - 새 화면을 만들 때 기존 컴포넌트의 variant/prop이 충분한지 스토리를 먼저 확인한다
    - `index.ts` — 공개 API
 {{#if HAS_DESIGN_REFS}}
    - **디자인 링크 물어보기** (`implement` 모드에서): 컴포넌트를 만든 후 Figma 링크가 있는지 물어본다.
