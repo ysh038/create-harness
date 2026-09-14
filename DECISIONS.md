@@ -227,6 +227,12 @@ molecule → organism, design-system → components/queries/stores). 결정 2·4
 두 결함 모두 "설정을 읽어보면 맞아 보이는" 형태였다. 위반 픽스처를 실제로 lint해서
 error 3건이 나오는 것을 확인하고 나서야 드러났다.
 
+**보충 — components/{Domain} 명명 혼동.** 실사용 중 `components/{Domain}`을 "organism 다음
+Atomic 계층"으로 오해하는 일이 반복됐다. Atomic 계층은 `design-system/` 안에서 닫히고,
+`components/{Domain}`은 기존 10-architecture의 도메인 폴더로서 *도메인 organism의 위치*다.
+`10-architecture.md`·`30-design-system.md` 양쪽에 subsection을 추가해 명시했다
+(hybrid 자체는 유지, 문서만 보강).
+
 ## 15. 디자인 토큰을 primitive → semantic 2계층으로 재구성한다
 
 v0.1의 `tokens.css`는 색상마다 hex 하나씩만 있는 평평한 목록이었다(`--color-primary`,

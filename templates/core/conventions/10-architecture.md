@@ -68,3 +68,28 @@ import { fetchExampleList } from '../../queries/Example/exampleApi'
 - 계층은 아래에서 위로만 의존한다. atom이 molecule을 import하면 ESLint error다.
 - 도메인 타입을 props로 받는 순간 `design-system/` 을 떠난다 —
   `design-system/` 안의 코드는 도메인 타입을 몰라야 한다.
+
+### Atomic 계층과 도메인 폴더의 관계
+
+혼동 방지를 위해 한 번 더 명시한다:
+
+- **`components/{Domain}/`은 Atomic의 다음 계층이 *아니다.***
+  Atomic 계층(atom → molecule → organism)은 모두 `design-system/` 안에 있다.
+- `components/{Domain}/`은 **도메인별 organism 전용 위치**다.
+  기존 10-architecture의 "기능 폴더" 구조에서 온 것이고, 도메인 타입을 props로
+  받는 organism이 여기 들어간다.
+- **pages/routes는 조립만 한다.** 페이지는 디자인시스템 폴더가 아니라 레이어 최상단으로,
+  organism/template을 조립하고 훅을 호출하되 자체 마크업·스타일을 최소화한다.
+
+```
+design-system/{atoms,molecules,organisms}  ← 도메인 비의존, 범용 재사용
+       ↑
+components/{Domain}                        ← 도메인 organism (예: ReviewCard)
+       ↑
+components/layouts                         ← template (슬롯 기반 레이아웃)
+       ↑
+routes / pages                             ← 조립 + 훅 호출
+```
+
+도메인이 들어오면 `design-system/`을 떠나고, 데이터를 가져오면 컴포넌트가 아니라
+page/hook이다 — 상세한 경계 규칙은 `30-design-system`을 본다.
