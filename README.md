@@ -22,9 +22,11 @@ Requires Node.js 20+.
 
 ## What you get
 
-- **`AGENTS.md`** — short source of truth for every agent (`CLAUDE.md` imports it)
+- **`AGENTS.md`** — short source of truth for every agent (`CLAUDE.md` imports it), includes design mode + coding style preferences
 - **Cursor rules / Claude skills** — architecture, data fetching, design system, testing, auth
-- **Workflows** — `/spec` → `/impl` → `/verify` → `/ship`, plus `/ds-init`, `/ds-add`, `/ux-review` when the design-system module is on
+- **Workflows** — `/spec` → `/impl` → `/verify` → `/ship`, plus `/ds-init`, `/ds-add`, `/ux-review`, `/ds-ref` when the design-system module is on
+- **Design reference map** (inspire/implement modes) — agent-maintained Figma link registry, prevents free redesign when `implement` mode is set
+- **Coding style config** — componentDeclaration (function/arrow), export (default/named), styling (css-modules/tailwind) stored in config, enforced by agents
 - **Commit gate** — shared script wired to Cursor `beforeShellExecution` and Claude `PreToolUse` (blocks failed checks, staged `.env`, `--no-verify`, force push)
 - **Reference code** — axios instance, `ProtectedRoute`, TanStack Query 3-layer example, Zustand store (compile-ready, not prose)
 - **Lint enforcement** — naming, public API boundaries, Atomic layer imports (early page raw JSX ban), color tokens via stylelint
@@ -37,15 +39,25 @@ Existing files are never overwritten. Conflicts land under `.harness/incoming/`.
 ```
 npx create-harness-cli [dir] [options]
 
---preset <name>     preset (currently: react-fe)
---agents <csv>      cursor,claude (default: both)
---modules <csv>     design-system,auth-http,data-fetching,lint
---ponytail          optional YAGNI ladder rules from ponytail
---dry-run           print the plan without writing
--y, --yes           skip prompts
+--preset <name>                preset (currently: react-fe)
+--agents <csv>                 cursor,claude (default: both)
+--modules <csv>                design-system,auth-http,data-fetching,lint
+--ponytail                     optional YAGNI ladder rules from ponytail
+--mode <mode>                  free|inspire|implement (default: free)
+--component-declaration <type> function|arrow (default: function)
+--component-export <type>      default|named (default: default)
+--styling <type>               css-modules|tailwind (when not detected)
+--figma-url <url>              Figma file URL (optional)
+--accept-disclaimer            design reference liability disclaimer
+--dry-run                      print the plan without writing
+-y, --yes                      skip prompts
 ```
 
-Interactive runs also ask whether you plan to use Storybook (`off` / `pending` in `.harness/config.json`). Use `/ds-init` later to install and set `ready`.
+Interactive runs also ask:
+- **Design mode**: free (no design reference) / inspire (redesign allowed) / implement (match Figma closely)
+- **Coding style**: component declaration, export pattern, styling approach
+- **Storybook intent**: `off` / `pending` in `.harness/config.json` (use `/ds-init` later to install and set `ready`)
+- **Figma URL** (optional, for inspire/implement modes): design reference map source
 
 ## Modules
 

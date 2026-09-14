@@ -6,6 +6,10 @@ import type {
     IScaffoldOptions,
     TAgent,
     TModule,
+    TDesignMode,
+    TComponentDeclaration,
+    TComponentExport,
+    TStyling,
 } from './types.js'
 
 const MODULE_LABELS: Record<TModule, string> = {
@@ -55,6 +59,151 @@ export const runPrompts = async (
             `이미 존재하는 에이전트 파일: ${detected.existingAgentFiles.join(', ')}\n` +
                 '내용이 다른 파일은 덮어쓰지 않고 .harness/incoming/ 아래에 둡니다.',
         )
+    }
+
+    // 1. 프로젝트 디자인 모드
+    const mode = (await p.select({
+        message: '이 프로젝트는 어떤 작업을 하나요?',
+        options: [
+            {
+                value: 'free',
+                label: '자유롭게 만들기',
+                hint: '디자인 참조 없이 구현 — 에이전트가 자율 디자인',
+            },
+            {
+                value: 'inspire',
+                label: '참고해서 만들기',
+                hint: '디자인을 영감으로 활용 — 재해석 허용',
+            },
+            {
+                value: 'implement',
+                label: '회사 일, 피그마 화면 맞추기',
+                hint: '제공된 디자인과 최대한 일치 — 자유로운 재디자인 금지',
+            },
+        ],
+        initialValue: defaults.mode,
+    })) as TDesignMode
+    if (p.isCancel(mode)) {
+        p.cancel('취소되었습니다.')
+        process.exit(1)
+    }
+
+    // 2. 코딩 스타일 — 컴포넌트 선언 방식
+    let componentDeclaration: TComponentDeclaration = defaults.style.componentDeclaration
+    if (!detected.isReact) {
+        // React가 아니면 물어보지 않고 기본값 사용
+    } else {
+        const declChoice = (await p.select({
+            message: '컴포넌트를 어떻게 선언하나요?',
+            options: [
+                { value: 'function', label: 'function 키워드 (function Button() {})' },
+                { value: 'arrow', label: '화살표 함수 (const Button = () => {})' },
+            ],
+            initialValue: componentDeclaration,
+        })) as TComponentDeclaration
+        if (p.isCancel(declChoice)) {
+            p.cancel('취소되었습니다.')
+            process.exit(1)
+        }
+        componentDeclaration = declChoice
+    }
+
+    // 3. 코딩 스타일 — export 방식
+    let componentExport: TComponentExport = defaults.style.componentExport
+    const exportChoice = (await p.select({
+        message: '컴포넌트를 어떻게 export 하나요?',
+        options: [
+            { value: 'default', label: 'export default Button' },
+            { value: 'named', label: 'export { Button }' },
+        ],
+        initialValue: componentExport,
+    })) as TComponentExport
+    if (p.isCancel(exportChoice)) {
+        p.cancel('취소되었습니다.')
+        process.exit(1)
+    }
+    componentExport = exportChoice
+
+    // 4. 코딩 스타일 — 스타일링 (감지되지 않은 경우에만)
+    let styling: TStyling = defaults.style.styling
+    if (!detected.hasTailwind && !detected.hasCssInJs) {
+        const styleChoice = (await p.select({
+            message: '스타일을 어떻게 작성하나요?',
+            options: [
+                { value: 'css-modules', label: 'CSS Modules (.module.css)' },
+                { value: 'tailwind', label: 'Tailwind CSS (유틸리티 클래스)' },
+            ],
+            initialValue: styling === 'detected' ? 'css-modules' : styling,
+        })) as TStyling
+        if (p.isCancel(styleChoice)) {
+            p.cancel('취소되었습니다.')
+            process.exit(1)
+        }
+        styling = styleChoice
+    } else if (detected.hasTailwind) {
+        styling = 'tailwind'
+    } else {
+        styling = 'detected'
+    }
+
+    // 5. Figma 파일 URL (inspire/implement 모드에서만)
+    let figmaUrl: string | undefined
+    let acceptDisclaimer = false
+    if (mode === 'inspire' || mode === 'implement') {
+        p.log.info(
+            [
+                '디자인 참조를 사용하는 모드입니다.',
+                'Figma 파일 URL을 입력하면 에이전트가 디자인 맵에 기록합니다.',
+                '(선택사항 — 나중에 직접 추가할 수도 있습니다)',
+            ].join('\n'),
+        )
+        const figmaInput = await p.text({
+            message: 'Figma 파일 URL (선택, 없으면 엔터)',
+            placeholder: 'https://www.figma.com/file/...',
+            validate: (value) => {
+                if (!value) return undefined
+                if (
+                    !value.startsWith('https://www.figma.com/') &&
+                    !value.startsWith('https://figma.com/')
+                ) {
+                    return 'Figma URL 형식이 아닙니다'
+                }
+                return undefined
+            },
+        })
+        if (p.isCancel(figmaInput)) {
+            p.cancel('취소되었습니다.')
+            process.exit(1)
+        }
+        figmaUrl = figmaInput || undefined
+
+        if (figmaUrl || mode === 'implement') {
+            p.log.warn(
+                [
+                    '',
+                    '⚠️  면책 조항',
+                    '',
+                    '디자인 참조 맵은 사용자의 책임으로 관리됩니다.',
+                    '- Figma 파일에 대한 접근 권한과 라이선스는 사용자 책임입니다',
+                    '- 에이전트는 제공된 링크를 저장만 하며, 라이선스를 검증하지 않습니다',
+                    '- 디자인 저작권·사용 권리는 프로젝트 소유자에게 있습니다',
+                    '',
+                ].join('\n'),
+            )
+            const disclaimerAccept = await p.confirm({
+                message: '위 조건을 이해하고 동의하시나요?',
+                initialValue: false,
+            })
+            if (p.isCancel(disclaimerAccept)) {
+                p.cancel('취소되었습니다.')
+                process.exit(1)
+            }
+            if (!disclaimerAccept) {
+                p.log.error('면책 조항 동의가 필요합니다.')
+                process.exit(1)
+            }
+            acceptDisclaimer = true
+        }
     }
 
     const agents = await p.multiselect<TAgent>({
@@ -133,5 +282,20 @@ export const runPrompts = async (
         process.exit(1)
     }
 
-    return { ...defaults, agents, modules, storybook, ponytail }
+    return {
+        ...defaults,
+        agents,
+        modules,
+        storybook,
+        ponytail,
+        mode,
+        fidelity: mode === 'free' ? null : mode === 'inspire' ? 'inspire' : 'match',
+        style: {
+            componentDeclaration,
+            componentExport,
+            styling,
+        },
+        figmaUrl,
+        acceptDisclaimer,
+    }
 }

@@ -52,9 +52,21 @@
 
 ## v0.4
 
+- [x] 프로젝트 디자인 모드 (free/inspire/implement) + fidelity
+- [x] 에이전트 관리 디자인 참조 맵 (`.harness/design-references.json`)
+- [x] 코딩 스타일 설문 + config 저장 (componentDeclaration/Export, styling)
+- [x] 이중 진입점 (CLI 프롬프트 + 에이전트 재질문)
+- [x] `/ds-ref` 워크플로 (디자인 소스·컴포넌트 링크 관리)
+- [x] 면책 조항 (Figma 라이선스 책임)
+- [x] AGENTS.md / ds-add.md 템플릿 업데이트
+- [x] DECISIONS.md #22 기록
+- [ ] 테스트 스냅샷 재생성 + 통과 확인
+- [ ] npm 배포 create-harness-cli@0.4.0 (PR 병합 후)
+
+## v0.5
+
 - [ ] `node-be` 프리셋
 - [ ] `monorepo` 프리셋
-- [ ] Figma / Storybook MCP 연동
 
 ## 논의 필요
 

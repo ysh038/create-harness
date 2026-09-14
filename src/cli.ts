@@ -68,6 +68,12 @@ const main = async (): Promise<void> => {
             modules: { type: 'string' },
             storybook: { type: 'string' },
             ponytail: { type: 'boolean', default: false },
+            mode: { type: 'string' },
+            'component-declaration': { type: 'string' },
+            'component-export': { type: 'string' },
+            styling: { type: 'string' },
+            'figma-url': { type: 'string' },
+            'accept-disclaimer': { type: 'boolean', default: false },
             'dry-run': { type: 'boolean', default: false },
             yes: { type: 'boolean', short: 'y', default: false },
             install: { type: 'boolean', default: false },
@@ -85,16 +91,22 @@ const main = async (): Promise<void> => {
         console.log(`사용법: npx create-harness-cli [대상 디렉터리] [옵션]
 
 옵션:
-  --preset <name>     프리셋 (기본: react-fe)
-  --agents <csv>      cursor,claude (기본: 둘 다)
-  --modules <csv>     design-system,auth-http,data-fetching,lint
-  --storybook <state> off|pending (design-system 모듈 선택 시만 유효)
-  --ponytail          서드파티 ponytail 규칙(YAGNI 사다리) 연동
-  --dry-run           파일을 쓰지 않고 계획만 출력
-  -y, --yes           질문 없이 진행 (명시적 플래그와 함께 쓰면 해당 값 사용)
-  --install           필요한 devDependency 설치 명령까지 출력 후 실행 안내
-  -h, --help          도움말
-  -v, --version       버전`)
+  --preset <name>                프리셋 (기본: react-fe)
+  --agents <csv>                 cursor,claude (기본: 둘 다)
+  --modules <csv>                design-system,auth-http,data-fetching,lint
+  --storybook <state>            off|pending (design-system 모듈 선택 시만 유효)
+  --ponytail                     서드파티 ponytail 규칙(YAGNI 사다리) 연동
+  --mode <mode>                  free|inspire|implement (기본: free)
+  --component-declaration <type> function|arrow (기본: function)
+  --component-export <type>      default|named (기본: default)
+  --styling <type>               css-modules|tailwind (감지되지 않은 경우)
+  --figma-url <url>              Figma 파일 URL (선택)
+  --accept-disclaimer            디자인 참조 면책 조항 수락
+  --dry-run                      파일을 쓰지 않고 계획만 출력
+  -y, --yes                      질문 없이 진행 (명시적 플래그와 함께 쓰면 해당 값 사용)
+  --install                      필요한 devDependency 설치 명령까지 출력 후 실행 안내
+  -h, --help                     도움말
+  -v, --version                  버전`)
         return
     }
 
@@ -116,6 +128,38 @@ const main = async (): Promise<void> => {
 
     const suggestions = suggestModules(detected)
     const explicitModules = parseCsv(values.modules, VALID_MODULES, 'module')
+
+    // mode 검증
+    const explicitMode = values.mode as 'free' | 'inspire' | 'implement' | undefined
+    if (explicitMode && !['free', 'inspire', 'implement'].includes(explicitMode)) {
+        console.error(
+            `알 수 없는 mode: "${explicitMode}" (가능한 값: free, inspire, implement)`,
+        )
+        process.exit(1)
+    }
+
+    // 스타일 옵션 검증
+    const declType = values['component-declaration'] as 'function' | 'arrow' | undefined
+    if (declType && !['function', 'arrow'].includes(declType)) {
+        console.error(
+            `알 수 없는 component-declaration: "${declType}" (가능한 값: function, arrow)`,
+        )
+        process.exit(1)
+    }
+    const exportType = values['component-export'] as 'default' | 'named' | undefined
+    if (exportType && !['default', 'named'].includes(exportType)) {
+        console.error(
+            `알 수 없는 component-export: "${exportType}" (가능한 값: default, named)`,
+        )
+        process.exit(1)
+    }
+    const stylingType = values.styling as 'css-modules' | 'tailwind' | undefined
+    if (stylingType && !['css-modules', 'tailwind'].includes(stylingType)) {
+        console.error(
+            `알 수 없는 styling: "${stylingType}" (가능한 값: css-modules, tailwind)`,
+        )
+        process.exit(1)
+    }
 
     // --storybook 검증: off|pending만 허용 (ready는 설치 시점에 불가)
     let explicitStorybook: 'off' | 'pending' | undefined = undefined
@@ -147,6 +191,26 @@ const main = async (): Promise<void> => {
             )
                 ? 'pending'
                 : 'off'),
+        mode: explicitMode ?? 'free',
+        fidelity:
+            explicitMode === 'inspire'
+                ? 'inspire'
+                : explicitMode === 'implement'
+                  ? 'match'
+                  : null,
+        style: {
+            componentDeclaration: declType ?? 'function',
+            componentExport: exportType ?? 'default',
+            styling: stylingType
+                ? stylingType
+                : detected.hasTailwind
+                  ? 'tailwind'
+                  : detected.hasCssInJs
+                    ? 'detected'
+                    : 'css-modules',
+        },
+        figmaUrl: values['figma-url'],
+        acceptDisclaimer: values['accept-disclaimer'],
         dryRun: values['dry-run'],
         yes: values.yes,
         install: values.install,

@@ -454,3 +454,144 @@ CLI 플래그 추가:
 이번 변경은 **질문 미러링만** 다룬다. 프로젝트 모드(free/inspire/implement), Figma 디자인
 참조 맵, 코딩 스타일 선호(function/arrow) 등의 설문 추가는 별도 범위다.
 
+## 23. 버전 0.4.0 — 프로젝트 디자인 모드 + 에이전트 관리 디자인 참조 맵 + 코딩 스타일 설문
+
+### 배경
+
+실사용 프로젝트에서 발견한 세 가지 차이점:
+1. **프로젝트마다 디자인 충실도 요구가 다르다** — 자유 구현(side project), 영감(오픈소스 재해석), 
+   정확한 구현(회사 일, Figma 화면 맞추기)
+2. **Figma 링크를 수동으로 복사하면 흩어진다** — 에이전트가 매번 물어보거나, 안 물어보고 
+   재디자인하거나. 중앙 레지스트리가 없으면 "이 컴포넌트의 디자인은 어디 있나요?"에 답할 수 없다
+3. **코딩 스타일 선호가 프로젝트마다 다르다** — `function Button()` vs `const Button = ()`, 
+   `export default` vs `export { Button }`, CSS Modules vs Tailwind. 에이전트가 혼용하면 
+   코드 리뷰에서 매번 통일 요청이 나온다
+
+### 해결 방안
+
+#### A. 프로젝트 디자인 모드 3단계
+
+`.harness/config.json`에 `mode` 필드 추가:
+- `free` — 디자인 참조 없이 자율 구현 (기본값)
+- `inspire` — 디자인을 영감으로 활용, 재해석 허용
+- `implement` — 제공된 디자인과 최대한 일치, 자유로운 재디자인 금지
+
+`fidelity` 필드 (선택):
+- `inspire` — 톤만 참고
+- `match` — 최대한 일치 (implement 모드 기본값)
+- `strict` — 픽셀 단위 일치 (미래 확장용, v0.4.0에서는 UI만)
+
+모드에 따라 에이전트 행동이 달라진다:
+- `free`: 디자인 참조 맵 비활성
+- `inspire`: 디자인 링크는 선택, 링크가 있어도 재해석 허용
+- `implement`: 링크된 디자인에서 벗어나지 않음, `/ds-add`에서 링크 요청
+
+#### B. 에이전트 관리 디자인 참조 맵
+
+`.harness/design-references.json` (mode가 `free`가 아닐 때 생성):
+```json
+{
+  "version": 1,
+  "mode": "implement",
+  "fidelity": "match",
+  "disclaimerAcceptedAt": "ISO-8601",
+  "sources": [{ "id", "label", "fileUrl", "role": "primary" }],
+  "entries": [{
+    "id": "atom-button",
+    "kind": "atom",
+    "codePath": "src/design-system/atoms/Button/Button.tsx",
+    "figma": { "url", "nodeId", "label" },
+    "status": "linked|needed|inspire-only|waived|broken",
+    "notes": ""
+  }]
+}
+```
+
+- **에이전트가 관리** — 사용자는 Figma URL만 붙여넣으면 됨 (JSON 편집 불필요)
+- `/ds-ref` 워크플로로 소스 등록 및 컴포넌트 링크 추가
+- `/ds-add`에서 `implement` 모드는 컴포넌트별 링크를 물어봄 (있음/없음/나중에)
+- Figma 접근은 사용자 MCP로 제공 (CLI가 API 키를 다루지 않음)
+
+**1:1 codegen 제품이 아니다** — 맵은 "어디를 보고 만들었는가"의 추적 기록이지, 
+"Figma → 코드" 자동 변환 엔진이 아니다. 에이전트는 여전히 토큰·Atomic 계층·접근성 규칙을 
+따라 **손으로** 코드를 작성한다.
+
+#### C. 코딩 스타일 설문 + config 저장
+
+`.harness/config.json`에 `style` 필드 추가:
+```json
+{
+  "style": {
+    "componentDeclaration": "function" | "arrow",
+    "componentExport": "default" | "named",
+    "styling": "css-modules" | "tailwind" | "detected"
+  }
+}
+```
+
+- 설치 시 질문 (감지 가능하면 감지, 불가능하면 물어봄)
+- `AGENTS.md`에 명시 → 에이전트가 항상 따름
+- CLI 플래그로도 제공: `--component-declaration`, `--component-export`, `--styling`
+
+**기본값 (--yes 경로)**: aimon-like 스타일 — `function` + `default` + CSS Modules 
+(감지 불가능한 경우). 이 조합이 접근성·React DevTools 호환성이 가장 넓다.
+
+#### D. 이중 진입점 (CLI + 에이전트 재질문)
+
+decision #18 (Storybook 의향)과 같은 패턴:
+1. CLI 프롬프트에서 물어봄 (대화형 / --yes / 플래그)
+2. 에이전트 채팅에서 config 비어있으면 다시 물어봄 (`/ds-ref` 워크플로)
+
+"설치 시 안 물어본 건 나중에 못 쓴다" 함정 방지 — 설치를 `--yes`로 넘겼어도 에이전트가 
+실제로 디자인 작업을 시작할 때 한 번 더 물어볼 수 있다.
+
+#### E. 면책 조항 (라이선스 책임)
+
+Figma 파일 URL 입력 또는 `implement` 모드 선택 시:
+```
+⚠️  면책 조항
+
+디자인 참조 맵은 사용자의 책임으로 관리됩니다.
+- Figma 파일에 대한 접근 권한과 라이선스는 사용자 책임입니다
+- 에이전트는 제공된 링크를 저장만 하며, 라이선스를 검증하지 않습니다
+- 디자인 저작권·사용 권리는 프로젝트 소유자에게 있습니다
+
+위 조건을 이해하고 동의하시나요?
+```
+
+수락 시각을 `config.json`과 `design-references.json` 양쪽에 ISO-8601로 기록.
+
+### 범위 밖 (v0.4.0)
+
+- Figma MCP 클라이언트를 CLI에 내장 — 사용자 MCP 설정으로 위임
+- 픽셀 단위 자동 검증 (`strict` 모드) — UI만 준비, 실제 강제는 나중
+- 전체 Figma 파일 자동 파싱 → 컴포넌트 시드 — 수동 등록만 (복잡도 과다)
+- npm 배포 — PR만, 병합 후 수동 publish
+
+### 추가 작업
+
+- `templates/core/AGENTS.md` — 모드·스타일 섹션 추가, 디자인 맵 설명
+- `templates/core/workflows/ds-add.md` — `implement` 모드에서 링크 물어보기 단계
+- `templates/core/workflows/ds-ref.md` (신규) — 디자인 소스·컴포넌트 링크 관리
+- `src/types.ts` — 새 타입들 (`IDesignReferences`, `ICodingStyle` 등)
+- `src/prompts.ts` — 모드·스타일·Figma URL·면책 프롬프트
+- `src/cli.ts` — 새 플래그들
+- `src/registry.ts` — `design-references.json` 생성, `HAS_DESIGN_REFS` 변수
+- `package.json` — v0.4.0
+- 테스트 업데이트 (스냅샷 재생성)
+
+### 결정의 이유
+
+**왜 1:1 codegen이 아닌가?** 
+Figma → 코드 자동 변환은 생성 품질·접근성·유지보수·토큰 준수에서 신뢰할 수 없다. 
+참조 맵은 "어디를 보고 만들었는가"의 **추적 기록**이지, 코드 생성 엔진이 아니다. 
+에이전트는 규칙을 따라 손으로 작성하되, 올바른 소스를 보고 작성한다는 차이다.
+
+**왜 이중 진입점?**
+실사용에서 `--yes`로 넘긴 뒤 "디자인 맵이 왜 없지?"라는 상황이 반복됐다. 
+설치 시 안 물어본 것을 나중에 다시 물어보면, 사용자는 그냥 채팅에서 답하면 되고 
+CLI를 재실행할 필요가 없다 (decision #18과 동일 패턴).
+
+**왜 에이전트가 맵을 관리?**
+JSON을 손으로 편집하게 하면 형식 오류·중복 id·status 불일치가 쌓인다. 
+에이전트가 URL만 받아 맵을 업데이트하면, 사용자는 Figma에서 복사-붙여넣기만 하면 된다.
