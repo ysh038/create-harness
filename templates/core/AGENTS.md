@@ -23,7 +23,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 
 ## 디자인 모드 및 코딩 스타일
 
-- **디자인 모드**: `{{DESIGN_MODE}}`{{#if DESIGN_FIDELITY}} (충실도: `{{DESIGN_FIDELITY}}`){{/if}}
+- **디자인 모드**: `{{DESIGN_MODE}}`{{#if HAS_DESIGN_FIDELITY}} (충실도: `{{DESIGN_FIDELITY}}`){{/if}}
 - **컴포넌트 선언**: `{{COMPONENT_DECLARATION}}`
 - **컴포넌트 export**: `{{COMPONENT_EXPORT}}`
 - **스타일링**: `{{STYLING}}`
@@ -61,8 +61,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
 | `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + 스토리 선행 추가 |
 | `/ux-review` | 인터랙션 상태·토큰 사용·시각적 완성도 리뷰 — 테스트로 못 옮기는 품질을 다룬다 |
-{{#if HAS_DESIGN_REFS}}| `/ds-ref` | 디자인 소스 등록 및 참조 맵 관리 |
-{{/if}}{{/if}}
+{{/if}}{{#if HAS_DESIGN_REFS}}| `/ds-ref` | 디자인 소스 등록 및 참조 맵 관리 |
+{{/if}}
 
 ## 절대 금지
 
@@ -95,7 +95,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
    - 명시적 플래그 + `-y`는 "묻지 말고 이 값들 사용" (조용한 기본값 아님)
    - 값 없이 `-y`만 쓰면 안 됨
 3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
-{{#if DESIGN_SYSTEM}}4. 디자인 화면 작업은 `/ds-add`{{#if HAS_DESIGN_REFS}}·`/ds-ref`{{/if}} — implement면 피그마 링크를 맵에 쌓는다
+{{#if DESIGN_SYSTEM}}4. 디자인 화면 작업은 `/ds-add` (컴포넌트 추가)
+{{/if}}{{#if HAS_DESIGN_REFS}}   - `/ds-ref` (디자인 링크 맵 관리) — implement면 피그마 링크를 맵에 쌓는다
 {{/if}}
 {{#if DESIGN_SYSTEM}}
 

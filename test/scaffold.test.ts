@@ -72,6 +72,49 @@ describe('buildPlan', () => {
         }
     })
 
+    it('AGENTS.md에 raw Mustache 조건문이 남지 않는다 (design-system ON)', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const agents = plan.find((action) => action.dest === 'AGENTS.md')!
+        expect(agents.content).not.toContain('{{#if')
+        expect(agents.content).not.toContain('{{/if}}')
+        expect(agents.content).toContain('/ds-init')
+        expect(agents.content).toContain('/ds-add')
+    })
+
+    it('AGENTS.md에 raw Mustache 조건문이 남지 않는다 (design-system OFF)', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            modules: ['auth-http', 'data-fetching', 'lint'],
+        })
+        const agents = plan.find((action) => action.dest === 'AGENTS.md')!
+        expect(agents.content).not.toContain('{{#if')
+        expect(agents.content).not.toContain('{{/if}}')
+        expect(agents.content).not.toContain('/ds-init')
+    })
+
+    it('AGENTS.md에 raw Mustache 조건문이 남지 않는다 (free mode)', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+        })
+        const agents = plan.find((action) => action.dest === 'AGENTS.md')!
+        expect(agents.content).not.toContain('{{#if')
+        expect(agents.content).not.toContain('{{/if}}')
+        expect(agents.content).not.toContain('디자인 참조 맵')
+    })
+
+    it('AGENTS.md에 raw Mustache 조건문이 남지 않는다 (implement mode with fidelity)', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+            fidelity: 'match',
+        })
+        const agents = plan.find((action) => action.dest === 'AGENTS.md')!
+        expect(agents.content).not.toContain('{{#if')
+        expect(agents.content).not.toContain('{{/if}}')
+        expect(agents.content).toContain('(충실도: `match`)')
+    })
+
     it('cursor 규칙 mdc는 frontmatter(globs)를 유지한다', () => {
         const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
         const arch = plan.find(

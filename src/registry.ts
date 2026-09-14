@@ -75,6 +75,7 @@ export const buildVars = (
     DESIGN_MODE: options.mode,
     HAS_DESIGN_REFS: String(options.mode !== 'free'),
     DESIGN_FIDELITY: options.fidelity ?? '',
+    HAS_DESIGN_FIDELITY: String(!!options.fidelity),
     COMPONENT_DECLARATION: options.style.componentDeclaration,
     COMPONENT_EXPORT: options.style.componentExport,
     STYLING: options.style.styling,
