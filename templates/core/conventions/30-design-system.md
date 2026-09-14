@@ -126,6 +126,31 @@ atom                  ← 더 못 쪼개는 최소 단위. 토큰만 사용 (But
    organism 이하에서는 쿼리 훅·전역 스토어를 호출하지 않는다. props로 받는다
    (그래야 스토리로 모든 상태를 렌더할 수 있다).
 
+#### `components/{Domain}` vs Atomic 계층
+
+`components/{Domain}/` 을 "organism보다 위의 계층"으로 혼동하는 일이 잦다. 명확히 한다:
+
+- **`components/{Domain}`은 Atomic 계층의 *다음 단계가 아니다.***
+  Atomic 계층(atom → molecule → organism)은 모두 `design-system/` 안에서 닫힌다.
+- `components/{Domain}`은 **도메인 organism의 위치**다. `design-system/organisms/`가
+  도메인 비의존 범용 organism을 담는다면, `components/{Domain}`은 특정 도메인
+  타입을 props로 받는 organism이 들어간다 (예: `IReview` → `components/Review/ReviewCard.tsx`).
+- **pages/routes는 디자인시스템 폴더가 아니다.** 10-architecture의 레이어 최상단으로,
+  organism/template을 조립하고 훅을 호출하는 자리다. 마크업·스타일을 여기에 쓰지 않는다.
+
+```
+design-system/organisms/  ← 범용 organism (CardList, Modal, FormGroup 등)
+       ↑
+components/{Domain}/      ← 도메인 organism (ReviewCard, UserProfile 등)
+       ↑
+components/layouts/       ← template (슬롯 기반 레이아웃)
+       ↑
+routes / pages            ← 조립 + 훅 호출만
+```
+
+도메인 타입이 props로 들어오는 순간 그 컴포넌트는 `design-system/`을 떠난다.
+`design-system/` 은 프로젝트 간 이식 가능해야 한다.
+
 ### 역방향·횡단 import 금지
 
 - atom → molecule/organism import 금지. molecule → organism 금지. **ESLint가 error 처리한다.**
