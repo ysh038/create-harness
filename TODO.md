@@ -72,7 +72,7 @@
 - [x] 모듈 선택 UX 개선 (비권장 경고 명확화)
 - [x] Machine path 노트 (README)
 - [x] DECISIONS.md #24 기록
-- [ ] 테스트 스냅샷 재생성 + 통과 확인
+- [x] 테스트 스냅샷 재생성 + 통과 확인 (45/45 통과)
 - [ ] npm 배포 create-harness-cli@0.4.1 (PR 병합 후, 수동)
 
 ## v0.5
