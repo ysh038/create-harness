@@ -152,7 +152,41 @@ export default [
         ['**/components/**', '**/queries/**', '**/stores/**'],
         'design-system 의 organism은 도메인을 모른다. 데이터는 props로 받고, 도메인 결합이 필요하면 src/components/{Domain}/ 으로 옮기세요 (30-design-system).',
     ),
+{{#if DESIGN_SYSTEM}}    // ── 페이지 raw JSX 금지 (30-design-system) ──────────────────────
     {
+        files: [
+            'src/pages/**/*.{ts,tsx}',
+            'src/routes/**/*.{ts,tsx}',
+            'src/App.tsx',
+            'src/app/page.tsx',
+        ],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        'JSXElement[openingElement.name.name=/^(button|input|select|textarea|form|a|div|span|p|h[1-6]|ul|ol|li|table|tr|td|th|img|video|audio|canvas|svg)$/]',
+                    message:
+                        '페이지는 조립만 한다. 이 태그는 Atomic 계층(atom/molecule/organism)으로 만들고 import하세요 (30-design-system).',
+                },
+            ],
+        },
+    },
+{{/if}}{{#if ATOMIC_BASELINE}}    {
+        files: (() => {
+            try {
+                return JSON.parse(
+                    require('fs').readFileSync('.harness/atomic-baseline.json', 'utf-8'),
+                )
+            } catch {
+                return []
+            }
+        })(),
+        rules: {
+            'no-restricted-syntax': ['warn'],
+        },
+    },
+{{/if}}    {
         // 스토리 export(Default, Interaction 등)는 관례상 PascalCase — 명명 규칙 예외
         files: ['src/**/*.stories.{ts,tsx}'],
         rules: {

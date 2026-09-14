@@ -33,6 +33,64 @@ const RAW_COLOR_PATTERN =
     /(?:color|fill|stroke|background|border-color|outline-color)[^;{}]*:[^;{}]*(#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\()/
 
 /**
+ * 페이지/라우트에서 raw intrinsic elements를 직접 사용하는 파일 — <button>, <input> 등
+ * 기존 프로젝트에 즉시 error로 적용하면 막히므로 baseline으로 grandfather 처리.
+ * react-router v6 기준으로 pages|routes 폴더, App.tsx를 스캔한다.
+ */
+const findPagesWithRawJsx = (targetDir: string): string[] => {
+    const found: string[] = []
+    const INTRINSIC_ELEMENTS = ['<button', '<input', '<select', '<textarea', '<form', '<a']
+    const PAGE_GLOBS = ['src/pages', 'src/routes', 'src/App.tsx', 'src/app/page.tsx']
+
+    for (const glob of PAGE_GLOBS) {
+        const fullPath = path.join(targetDir, glob)
+        if (!existsSync(fullPath)) continue
+
+        const scanPath = (filePath: string): void => {
+            try {
+                if (filePath.endsWith('.tsx') || filePath.endsWith('.jsx')) {
+                    const content = readFileSync(filePath, 'utf-8')
+                    if (INTRINSIC_ELEMENTS.some((tag) => content.includes(tag))) {
+                        found.push(path.relative(targetDir, filePath).split(path.sep).join('/'))
+                    }
+                }
+            } catch {
+                // 읽을 수 없는 파일 무시
+            }
+        }
+
+        try {
+            const stat = require('fs').lstatSync(fullPath)
+            if (stat.isFile()) {
+                scanPath(fullPath)
+            } else if (stat.isDirectory()) {
+                const walk = (dir: string): void => {
+                    try {
+                        const entries = readdirSync(dir, { withFileTypes: true })
+                        for (const entry of entries) {
+                            if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+                            const entryPath = path.join(dir, entry.name)
+                            if (entry.isDirectory()) {
+                                walk(entryPath)
+                            } else {
+                                scanPath(entryPath)
+                            }
+                        }
+                    } catch {
+                        // 읽을 수 없는 디렉터리 무시
+                    }
+                }
+                walk(fullPath)
+            }
+        } catch {
+            // 경로가 없거나 접근 불가
+        }
+    }
+
+    return found.sort()
+}
+
+/**
  * src/ 안에서 색상 원시값을 쓰는 기존 CSS 파일을 찾는다.
  * 기존 프로젝트에 토큰 강제를 error로 얹으면 첫 커밋부터 수백 건이 막혀
  * 게이트를 꺼버리게 된다 — 이 목록이 stylelint 유예(baseline) 대상이 된다.
@@ -142,6 +200,7 @@ export const detect = (targetDir: string): IDetectResult => {
             existsSync(path.join(targetDir, candidate)),
         ),
         cssFilesWithRawColor: findCssFilesWithRawColor(targetDir),
+        pagesWithRawJsx: findPagesWithRawJsx(targetDir),
         scripts,
         existingAgentFiles,
     }
