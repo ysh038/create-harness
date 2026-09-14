@@ -59,9 +59,26 @@
 - [x] `/ds-ref` 워크플로 (디자인 소스·컴포넌트 링크 관리)
 - [x] 면책 조항 (Figma 라이선스 책임)
 - [x] AGENTS.md / ds-add.md 템플릿 업데이트
-- [x] DECISIONS.md #22 기록
-- [ ] 테스트 스냅샷 재생성 + 통과 확인
-- [ ] npm 배포 create-harness-cli@0.4.0 (PR 병합 후)
+- [x] DECISIONS.md #23 기록 (모드·참조 맵·스타일)
+- [x] npm 배포 create-harness-cli@0.4.0 (+ git tag `v0.4.0`)
+- [x] DECISIONS.md #22 기록 (CLI↔에이전트 질문 미러, v0.3.3)
+
+## v0.4.1 — demo-v04 dogfood (Harness v04 Tester)
+
+실사용: `create-harness-demo-v04`, implement + Figma, 로그인 `/ds-add`.
+우선순위: 1 → 2 → 4 → 5 → 3 → 6
+
+- [ ] `/ds-init` 예제 네이밍 — atom/molecule/organism/layout 예제는 **무조건 `Example` 접두**
+  (예: `ExampleButton`, `ExampleTextField`, `ExampleForm`, `ExampleLayout`). 제품 Button과 혼동 방지
+- [ ] `styling` 기본값 — `.module.css` 없으면 `css-modules`로 조용히 확정하지 말 것.
+  plain CSS vs CSS Modules 구분; 미사용 시 묻거나 기본을 `css`/`plain`으로 명확히
+- [ ] implement + Figma일 때 `/ds-init` primary 선질문 — MCP로 변수/컨텍스트 먼저 읽고,
+  없거나 연결 실패일 때만 브랜드 primary 질문
+- [ ] 제품 컴포넌트 스토리 — 실제 사용 variant 포함 (예: Login fullWidth / 크기). 예제 스토리와 분리(1번)
+- [ ] 모듈 설문 UX — 비권장/강제 포함 시 **컴파일 깨질 수 있음** 경고를 더 눈에 띄게,
+  추천 기본 선택 vs 강제 선택 차이 명시
+- [ ] 문서 메모 — 로컬 Mac 경로는 machineId/부모 에이전트가 다뤄야 함 (executor 단독 한계).
+  create-harness 버그라기보다 실행 환경 가이드
 
 ## v0.5
 

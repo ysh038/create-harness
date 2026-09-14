@@ -595,3 +595,21 @@ CLI를 재실행할 필요가 없다 (decision #18과 동일 패턴).
 **왜 에이전트가 맵을 관리?**
 JSON을 손으로 편집하게 하면 형식 오류·중복 id·status 불일치가 쌓인다. 
 에이전트가 URL만 받아 맵을 업데이트하면, 사용자는 Figma에서 복사-붙여넣기만 하면 된다.
+
+## 24. v0.4.0 dogfood (demo-v04) — 예제 네이밍·styling 감지·Figma 우선
+
+`create-harness-demo-v04`에서 implement 모드 + Figma로 로그인 화면 `/ds-add`까지 돌린 결과
+(보고: Harness v04 Tester). 제품 버그가 아니라 **템플릿/설문 기본값 품질** 이슈가 컸다.
+
+1. **`/ds-init` 예제가 제품처럼 보인다.** `atoms/Button` 이름은 로그인 Button과 스토리·재고 조사에서
+   섞인다. 예제 계층은 `Example*` 접두로 고정한다 (예제 = 모방용 샘플, 제품 API 아님).
+2. **`styling: css-modules` 기본이 과하다.** Tailwind/CSS-in-JS가 없다고 `.module.css`도 없는데
+   CSS Modules로 확정하면 Vite 기본 `App.css` 프로젝트에서 오해한다. plain vs modules를
+   구분하고, 모듈 파일이 없으면 묻거나 `css`로 둔다.
+3. **implement인데 primary를 먼저 묻는다.** `/ds-init`이 기본 인디고면 브랜드 색을 묻는데,
+   Figma 소스·MCP가 있으면 변수/컨텍스트를 먼저 읽고 없을 때만 묻는다.
+4. **스토리 괴리**는 1번(예제 분리) + 제품 스토리에 실제 variant를 넣으면 줄어든다.
+5. **모듈 설문 경고**·**머신 경로 가이드**는 UX/문서 보강 (TODO v0.4.1).
+
+코드 수정은 v0.4.1에서 1→2→4→5→3→6 순으로 처리한다.
+
