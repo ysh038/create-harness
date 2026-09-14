@@ -85,18 +85,20 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 1. **CLI와 같은 설치 질문을 채팅에서 먼저 물어본다** (`/harness-setup` 참고):
    - 프로젝트 유형(`mode`): 자유롭게 / 톤만 참고 / 회사·피그마 맞추기
    - 코딩 스타일: 선언(function|arrow), export(default|named), 스타일(필요 시)
-   - inspire/implement면 피그마 파일 URL(선택) + 면책 확인
    - 대상 에이전트: Cursor and/or Claude Code
    - 포함 모듈: design-system, auth-http, data-fetching, lint (core는 항상 포함)
 {{#if DESIGN_SYSTEM}}   - Storybook 계획 (design-system 선택 시): 사용 의향 있으면 `pending`, 없으면 `off`
 {{/if}}   - ponytail 설치 여부
 2. 답을 받으면 **명시적 플래그와 함께 `-y`로 CLI를 실행**한다
-   - 예: `--mode implement --component-declaration function --component-export default --agents cursor --modules design-system,lint --storybook pending --figma-url … --accept-disclaimer -y`
+   - 예: `--mode implement --component-declaration function --component-export default --agents cursor --modules design-system,lint --storybook pending -y`
    - 명시적 플래그 + `-y`는 "묻지 말고 이 값들 사용" (조용한 기본값 아님)
    - 값 없이 `-y`만 쓰면 안 됨
 3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
-{{#if DESIGN_SYSTEM}}4. 디자인 화면 작업은 `/ds-add` (컴포넌트 추가)
-{{/if}}{{#if HAS_DESIGN_REFS}}   - `/ds-ref` (디자인 링크 맵 관리) — implement면 피그마 링크를 맵에 쌓는다
+{{#if DESIGN_SYSTEM}}4. **디자인 화면 작업**은 `/ds-add` (컴포넌트 추가) 워크플로에서 처리
+   - **implement 모드**: 새 화면/컴포넌트 시작 시 참고 URL을 물어본다
+     "이 화면에 참고할 피그마/URL 있어요?" (있음/없음/나중에)
+   - 사용자가 요청 메시지에 이미 URL을 포함했으면 저장하고, 다시 묻지 않는다
+{{/if}}{{#if HAS_DESIGN_REFS}}   - `/ds-ref` (디자인 링크 맵 관리) — 나중에 URL 추가 또는 소스 등록
 {{/if}}
 {{#if DESIGN_SYSTEM}}
 

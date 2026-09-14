@@ -752,3 +752,61 @@ v0.4.1은 대상 프로젝트 산출물 개선(Example* naming, Figma 우선), �
 - 버전 0.4.2 bump
 
 npm 배포는 PR 병합 후 수동 실행. 이번 릴리스는 버그 수정이 주 목적이다.
+
+## 26. 버전 0.4.3 — 설치 시 Figma URL 수집 제거 (implement 모드 포함)
+
+### 배경
+
+실사용에서 발견한 근본 문제: **설치 시점에 Figma URL을 물어보는 것은 implement 모드에서도 의미가 없다.**
+
+- **implement 모드는 N개 화면을 만드는 프로젝트다** — 하나의 Figma 파일 URL로는 "어느 화면인가?"를 표현할 수 없다
+- 설치 시 URL을 받으면:
+  1. 첫 화면만 링크되고 나머지는 안 받게 되거나
+  2. 전체 파일 URL을 받았는데 각 화면 노드 ID는 없어서 쓸모없거나
+  3. 첫 화면 말고는 맵에 안 쌓여서 결국 "링크가 있는데 왜 안 보고 만들었나요?" 재질문이 나온다
+- **올바른 시점은 각 화면을 만들 때** (`/ds-add`): "이 화면에 참고할 피그마/URL 있어요?"
+
+### 결정
+
+**설치 = 모드만. Figma URL = 화면 작업 시.**
+
+- CLI 대화형 프롬프트에서 Figma URL 질문 제거 (inspire/implement 무관)
+- `--figma-url` 플래그는 남김 (power user가 명시적으로 주면 받음)
+- Figma URL 없으면 disclaimer도 스킵 (명시적 플래그 없는 한)
+- inspire/implement 모드 선택 시 `.harness/design-references.json` 빈 맵으로 시드 (URL 없이)
+- 에이전트 워크플로 (`/harness-setup`, `AGENTS.md`)도 동일 — 설치 때 Figma 안 물어봄
+- **`/ds-add` 워크플로**: implement 모드에서 각 화면 시작 시 "이 화면에 참고할 피그마/URL 있어요?" 물어봄 (있음/없음/나중에)
+- 사용자가 이미 요청 메시지에 URL을 포함했으면 저장하고, 다시 묻지 않음
+
+### 근거
+
+- **"어느 화면"을 설치 시점에 알 수 없다** — implement 프로젝트는 화면이 여러 개다
+- URL 수집은 **컨텍스트가 있는 시점**(화면 이름·요구사항이 명확할 때)에 하는 게 맞다
+- 설치 때 받으면 첫 화면만 링크되거나, 전체 파일 URL인데 노드 ID 없어서 쓸모없거나
+- `/ds-add` 실행 시 물어보면: 
+  - 맥락이 명확함 ("로그인 화면" + "피그마 있어요?")
+  - N개 화면을 N번 물어보므로 누락 없음
+  - 없으면 waived, 나중에면 needed 상태로 기록
+
+### 변경 사항
+
+1. **`src/prompts.ts`**: 155-211줄 Figma URL 프롬프트 제거, figmaUrl/acceptDisclaimer는 defaults 값 사용
+2. **`src/registry.ts`**: mode가 free가 아니면 figmaUrl 유무와 관계없이 빈 design-references.json 생성
+3. **`templates/core/workflows/harness-setup.md`**: Q3 (피그마 파일 링크) 제거, Q 번호 재조정
+4. **`templates/core/AGENTS.md`**: 설치 시 Figma URL 재질문 제거, `/ds-add` 실행 시 물어보도록 명시
+5. **`templates/core/workflows/ds-add.md`**: 디자인 링크 물어보기 강조 (있음/없음/나중에), 사용자가 이미 URL 포함 시 재질문 안 함
+6. **`README.md`**: --figma-url 플래그는 optional, interactive install에서 묻지 않는다는 노트 추가
+7. **`package.json`**: 버전 0.4.3 bump
+
+### 범위 밖
+
+- npm 배포 (PR 병합 후 수동)
+- 데모 앱
+
+### 완료 조건
+
+- PR 생성
+- 버전 0.4.3
+- 테스트 통과
+- 설치 경로에 Figma 프롬프트 없음
+
