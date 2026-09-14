@@ -91,6 +91,8 @@ npm run dev -- <target> --yes --dry-run
 - everything else — this CLI
 - roadmap: [`TODO.md`](./TODO.md)
 
+**Note on local paths**: When running `create-harness-cli` with a local machine path (e.g. `/Users/...` on macOS), the executing context needs machine-targeted tools or a parent agent that can access that path. Cloud Agent sandbox executors may not see local machine paths directly.
+
 ## License
 
 [MIT](./LICENSE)

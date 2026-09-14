@@ -99,7 +99,7 @@ const main = async (): Promise<void> => {
   --mode <mode>                  free|inspire|implement (기본: free)
   --component-declaration <type> function|arrow (기본: function)
   --component-export <type>      default|named (기본: default)
-  --styling <type>               css-modules|tailwind (감지되지 않은 경우)
+  --styling <type>               css|css-modules|tailwind (감지되지 않은 경우)
   --figma-url <url>              Figma 파일 URL (선택)
   --accept-disclaimer            디자인 참조 면책 조항 수락
   --dry-run                      파일을 쓰지 않고 계획만 출력
@@ -153,10 +153,10 @@ const main = async (): Promise<void> => {
         )
         process.exit(1)
     }
-    const stylingType = values.styling as 'css-modules' | 'tailwind' | undefined
-    if (stylingType && !['css-modules', 'tailwind'].includes(stylingType)) {
+    const stylingType = values.styling as 'css' | 'css-modules' | 'tailwind' | undefined
+    if (stylingType && !['css', 'css-modules', 'tailwind'].includes(stylingType)) {
         console.error(
-            `알 수 없는 styling: "${stylingType}" (가능한 값: css-modules, tailwind)`,
+            `알 수 없는 styling: "${stylingType}" (가능한 값: css, css-modules, tailwind)`,
         )
         process.exit(1)
     }
@@ -207,7 +207,9 @@ const main = async (): Promise<void> => {
                   ? 'tailwind'
                   : detected.hasCssInJs
                     ? 'detected'
-                    : 'css-modules',
+                    : detected.hasCssModules
+                      ? 'css-modules'
+                      : 'css',
         },
         figmaUrl: values['figma-url'],
         acceptDisclaimer: values['accept-disclaimer'],

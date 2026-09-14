@@ -16,10 +16,19 @@ UI 작업이 처음 필요해진 시점에 실행한다. 이미 `.storybook/` �
 
 2. **브랜드 토큰 확인**: `src/design-system/tokens.css` 의 `--primitive-primary-*` 가
    아직 하네스 기본값(`#4f46e5` 계열)이면, 지금이 UI 작업이 실제로 시작되는 시점이므로
-   사용자에게 브랜드 색상을 묻는다. 답을 받으면 램프 10단계를 전부 교체한다(단계 하나만
-   바꾸면 hover·pressed 파생값이 어긋난다). 아직 정해지지 않았다면 기본값 그대로 두되
-   `docs/product-spec.md` TODO에 "브랜드 컬러 확정 필요"를 남긴다 — 이 확인을 건너뛰면
-   기본값이 그대로 굳어져 나중에 아무도 안 건드리게 된다.
+   브랜드 색상을 결정해야 한다.
+   
+   **모드가 `implement` 또는 `inspire`이고 `.harness/design-references.json` 에 Figma 소스가 있으면:**
+   - 먼저 사용자 MCP를 통해 Figma 파일의 변수(variables) / 디자인 컨텍스트를 읽는다
+   - Figma에서 primary/brand 색상 램프를 찾아 `--primitive-primary-*` 10단계로 매핑한다
+   - 변수를 찾을 수 없거나 MCP를 사용할 수 없으면 아래 수동 질문으로 진행
+   
+   **Figma 변수가 없거나 `free` 모드이면:**
+   - 사용자에게 브랜드 색상을 묻는다. 답을 받으면 램프 10단계를 전부 교체한다(단계 하나만
+     바꾸면 hover·pressed 파생값이 어긋난다)
+   - 아직 정해지지 않았다면 기본값 그대로 두되 `docs/product-spec.md` TODO에
+     "브랜드 컬러 확정 필요"를 남긴다 — 이 확인을 건너뛰면 기본값이 그대로 굳어져
+     나중에 아무도 안 건드리게 된다.
 
 3. **공식 CLI로 설치** (손으로 설정 파일을 쓰지 않는다 — 프레임워크·빌더 감지는 CLI가 한다):
 
@@ -83,9 +92,10 @@ options: {
 ```
 
 8. **참조 구현 생성**: 위 폴더에 이 프로젝트의 토큰만 쓰는 **한 줄기의 계층 예제**를 만든다 —
-   `atoms/Button`, `molecules/FormField`(Button + 인풋 + 에러 메시지),
-   `organisms/ExampleForm`(FormField 조합), `layouts/ExampleLayout`(슬롯 레이아웃).
-   각각 스토리 포함, `title` 은 계층 그대로.
+   `atoms/ExampleButton`, `molecules/ExampleFormField`(ExampleButton + 인풋 + 에러 메시지),
+   `organisms/ExampleForm`(ExampleFormField 조합), `layouts/ExampleLayout`(슬롯 레이아웃).
+   각각 스토리 포함, `title` 은 계층 그대로(`Atoms/ExampleButton` 등).
+   **Example* 접두사를 써서 제품 컴포넌트(Button, FormField 등)와 충돌하지 않게 한다.**
    흩어진 예제 3종보다 **한 화면이 atom에서 organism까지 쌓이는 과정**을 보여주는 편이
    모방 대상으로 낫다. 이 예제들은 컴파일되는 코드이므로 API가 바뀌면 깨진다 —
    그게 목적이다. 에이전트(자신 포함)가 산문 문서 대신 이 코드를 모방하게 된다.
