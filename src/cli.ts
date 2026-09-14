@@ -12,7 +12,12 @@ import { writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
 import { patchEslintIgnores } from './eslintPatch.js'
 import { buildPonytailAction } from './ponytail.js'
-import { buildPlan, hasStylelintBaseline, requiredDevDeps } from './registry.js'
+import {
+    buildPlan,
+    hasAtomicBaseline,
+    hasStylelintBaseline,
+    requiredDevDeps,
+} from './registry.js'
 import { recommendedModules, suggestModules } from './suggest.js'
 import type { IScaffoldOptions, TAgent, TModule } from './types.js'
 
@@ -120,6 +125,13 @@ const main = async (): Promise<void> => {
         // --modules 를 주지 않으면 감지 결과가 기본값을 정한다
         modules: explicitModules ?? recommendedModules(detected),
         ponytail: values.ponytail ?? false,
+        // --yes 경로에서는 design-system 선택 시 pending, 없으면 off
+        storybook:
+            (explicitModules ?? recommendedModules(detected)).includes(
+                'design-system',
+            )
+                ? 'pending'
+                : 'off',
         dryRun: values['dry-run'],
         yes: values.yes,
         install: values.install,
@@ -229,6 +241,17 @@ const main = async (): Promise<void> => {
         )
     }
 
+    if (hasAtomicBaseline(detected, options)) {
+        console.log(
+            `\n${pc.yellow('Atomic 유예')} — raw JSX를 쓰던 기존 페이지 ` +
+                `${detected.pagesWithRawJsx.length}개를 .harness/atomic-baseline.json 에 올렸습니다.\n` +
+                pc.dim(
+                    '  이 파일들만 warning 이고 새로 만드는 페이지는 error 입니다.\n' +
+                        '  페이지를 Atomic 계층(atom/molecule/organism)으로 리팩터링할 때마다 목록에서 경로를 지우세요.',
+                ),
+        )
+    }
+
     if (ponytailTag) {
         console.log(
             `\n${pc.green('ponytail')} — Cursor 규칙을 릴리스 ${ponytailTag}에서 받아 설치했습니다 (.cursor/rules/ponytail.mdc).`,
@@ -255,8 +278,8 @@ const main = async (): Promise<void> => {
         'AGENTS.md 의 TODO와 docs/product-spec.md 를 프로젝트에 맞게 채우세요',
         '.harness/config.json 의 checks 를 확인하세요 (게이트·/verify 가 이 목록을 실행합니다)',
     ]
-    if (options.modules.includes('design-system')) {
-        steps.push('UI 작업 전이라면 /ds-init 워크플로로 Storybook을 설치하세요')
+    if (options.modules.includes('design-system') && options.storybook === 'pending') {
+        steps.push('UI 작업 전에 /ds-init 워크플로로 Storybook을 설치하세요')
     }
     if (options.ponytail && options.agents.includes('claude')) {
         steps.unshift(

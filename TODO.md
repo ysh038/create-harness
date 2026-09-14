@@ -43,6 +43,13 @@
 
 ## v0.3
 
+- [x] Storybook Option A — 설치 시 의향 질문, config에 상태 기록 (`off` | `pending` | `ready`)
+- [x] Brownfield Atomic baseline — 기존 페이지 raw JSX 유예 목록 (`.harness/atomic-baseline.json`)
+- [x] 페이지 raw JSX 금지 ESLint 규칙 — intrinsic elements 직접 사용 error (유예 파일은 warning)
+- [x] Storybook 상태 기반 조건부 강제 준비 (ready 상태에서만 story 요구사항 활성화할 구조)
+
+## v0.4
+
 - [ ] `node-be` 프리셋
 - [ ] `monorepo` 프리셋
 - [ ] Figma / Storybook MCP 연동

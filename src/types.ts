@@ -26,6 +26,8 @@ export interface IDetectResult {
     eslintConfigFile?: string
     /** 색상 원시값을 쓰는 기존 CSS 파일 — stylelint 유예(baseline) 대상 */
     cssFilesWithRawColor: string[]
+    /** 페이지/라우트에서 raw intrinsic elements 사용 — Atomic baseline 대상 */
+    pagesWithRawJsx: string[]
     scripts: Record<string, string>
     /** 이미 존재하는 에이전트 관련 파일 (충돌 안내용) */
     existingAgentFiles: string[]
@@ -44,9 +46,12 @@ export interface ICheck {
     command: string
 }
 
+export type TStorybookState = 'off' | 'pending' | 'ready'
+
 export interface IHarnessConfig {
     packageManager: TPackageManager
     checks: ICheck[]
+    storybook: TStorybookState
 }
 
 export interface IScaffoldOptions {
@@ -56,6 +61,8 @@ export interface IScaffoldOptions {
     modules: TModule[]
     /** 서드파티 ponytail 규칙(YAGNI 사다리) 연동 여부 — 코어 4모듈과 별도 축이다 */
     ponytail: boolean
+    /** Storybook 사용 의향 — CLI 설치 시 결정 */
+    storybook: TStorybookState
     dryRun: boolean
     yes: boolean
     install: boolean

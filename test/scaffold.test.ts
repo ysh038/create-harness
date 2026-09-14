@@ -34,6 +34,7 @@ const fakeDetect = (overrides: Partial<IDetectResult> = {}): IDetectResult => ({
     hasEslintFlatConfig: true,
     eslintConfigFile: 'eslint.config.js',
     cssFilesWithRawColor: [],
+    pagesWithRawJsx: [],
     existingAgentFiles: [],
     ...overrides,
 })
@@ -44,6 +45,7 @@ const fullOptions = (targetDir: string): IScaffoldOptions => ({
     agents: ['cursor', 'claude'],
     modules: ['design-system', 'auth-http', 'data-fetching', 'lint'],
     ponytail: false,
+    storybook: 'pending',
     dryRun: false,
     yes: true,
     install: false,
@@ -330,6 +332,76 @@ describe('stylelint 유예 목록(baseline)', () => {
         const config = plan.find((action) => action.dest === 'stylelint.config.js')!
         expect(config.content).not.toContain('overrides')
         expect(config.content).not.toContain('readFileSync')
+    })
+})
+
+describe('Atomic 유예 목록(baseline)', () => {
+    const legacy = ['src/pages/Home.tsx', 'src/App.tsx']
+
+    it('기존 페이지에 raw JSX가 있으면 baseline 파일과 warning 오버라이드를 만든다', () => {
+        const plan = buildPlan(
+            fakeDetect({ pagesWithRawJsx: legacy }),
+            fullOptions('/tmp/fake'),
+        )
+        const baseline = plan.find(
+            (action) => action.dest === '.harness/atomic-baseline.json',
+        )
+        expect(JSON.parse(baseline!.content)).toEqual(legacy)
+
+        const eslint = plan.find(
+            (action) => action.dest === 'eslint.harness.config.js',
+        )!
+        expect(eslint.content).toContain('atomic-baseline.json')
+        expect(eslint.content).toContain("'no-restricted-syntax': ['warn']")
+    })
+
+    it('raw JSX가 없으면 baseline을 만들지 않고 error 규칙만 남는다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        expect(
+            plan.some(
+                (action) => action.dest === '.harness/atomic-baseline.json',
+            ),
+        ).toBe(false)
+
+        const eslint = plan.find(
+            (action) => action.dest === 'eslint.harness.config.js',
+        )!
+        expect(eslint.content).not.toContain('atomic-baseline.json')
+        expect(eslint.content).toContain('페이지는 조립만 한다')
+    })
+
+    it('design-system 없이 lint만 켜면 페이지 raw JSX 규칙이 안 걸린다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            modules: ['lint'],
+        })
+        const eslint = plan.find(
+            (action) => action.dest === 'eslint.harness.config.js',
+        )!
+        expect(eslint.content).not.toContain('페이지는 조립만 한다')
+    })
+})
+
+describe('Storybook 상태 저장', () => {
+    it('config.json에 storybook 상태가 기록된다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const config = plan.find(
+            (action) => action.dest === '.harness/config.json',
+        )!
+        const parsed = JSON.parse(config.content)
+        expect(parsed.storybook).toBe('pending')
+    })
+
+    it('storybook: off 일 때도 config에 기록된다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            storybook: 'off',
+        })
+        const config = plan.find(
+            (action) => action.dest === '.harness/config.json',
+        )!
+        const parsed = JSON.parse(config.content)
+        expect(parsed.storybook).toBe('off')
     })
 })
 

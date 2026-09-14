@@ -43,6 +43,18 @@ export const hasStylelintBaseline = (
     options.modules.includes('design-system') &&
     detected.cssFilesWithRawColor.length > 0
 
+/**
+ * 기존 페이지가 raw JSX를 쓰면 그 파일들만 유예 목록에 넣는다.
+ * lint 모듈 포함 시에만 강제되므로 두 조건을 함께 체크한다.
+ */
+export const hasAtomicBaseline = (
+    detected: IDetectResult,
+    options: IScaffoldOptions,
+): boolean =>
+    options.modules.includes('design-system') &&
+    options.modules.includes('lint') &&
+    detected.pagesWithRawJsx.length > 0
+
 export const buildVars = (
     detected: IDetectResult,
     options: IScaffoldOptions,
@@ -57,6 +69,9 @@ export const buildVars = (
     DESIGN_SYSTEM: String(options.modules.includes('design-system')),
     STYLELINT_BASELINE: String(hasStylelintBaseline(detected, options)),
     CSS_RAW_COLOR_FILES: String(detected.cssFilesWithRawColor.length),
+    ATOMIC_BASELINE: String(hasAtomicBaseline(detected, options)),
+    PAGE_RAW_JSX_FILES: String(detected.pagesWithRawJsx.length),
+    STORYBOOK_STATE: options.storybook,
 })
 
 /**
@@ -300,6 +315,14 @@ const buildModuleActions = (
                 module: 'design-system',
             })
         }
+        if (hasAtomicBaseline(detected, options)) {
+            actions.push({
+                dest: '.harness/atomic-baseline.json',
+                content:
+                    JSON.stringify(detected.pagesWithRawJsx, null, 4) + '\n',
+                module: 'design-system',
+            })
+        }
         actions.push(
             {
                 dest: 'src/design-system/tokens.css',
@@ -430,6 +453,7 @@ export const buildPlan = (
     const config: IHarnessConfig = {
         packageManager: detected.packageManager,
         checks: buildChecks(detected, options),
+        storybook: options.storybook,
     }
 
     const actions: IFileAction[] = [

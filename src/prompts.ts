@@ -97,6 +97,26 @@ export const runPrompts = async (
         process.exit(1)
     }
 
+    // design-system 모듈 선택 시에만 Storybook 질문
+    let storybook: 'off' | 'pending' | 'ready' = 'off'
+    if (modules.includes('design-system')) {
+        p.log.info(
+            [
+                'Storybook — 컴포넌트 스토리·접근성·시각 회귀 검증 도구.',
+                '지금 설치하지 않고 의향만 기록하면, /ds-init 워크플로가 나중에 설치합니다.',
+            ].join('\n'),
+        )
+        const useStorybook = await p.confirm({
+            message: 'Storybook을 사용할 계획인가요?',
+            initialValue: true,
+        })
+        if (p.isCancel(useStorybook)) {
+            p.cancel('취소되었습니다.')
+            process.exit(1)
+        }
+        storybook = useStorybook ? 'pending' : 'off'
+    }
+
     p.log.info(
         [
             'ponytail — 이 하네스와 무관한 서드파티 규칙(YAGNI 사다리, 최소 구현 강제).',
@@ -113,5 +133,5 @@ export const runPrompts = async (
         process.exit(1)
     }
 
-    return { ...defaults, agents, modules, ponytail }
+    return { ...defaults, agents, modules, storybook, ponytail }
 }

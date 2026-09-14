@@ -339,3 +339,70 @@ config가 아예 없는 프로젝트) 중 발견했다. 둘 다 지금까지 테
 직접 검증하는 테스트가 그동안 없었다는 공통점이 있다. 재발 방지로 두 항목 다
 테스트를 추가했다 — `requiredDevDeps` describe 블록 신설, naming-convention
 예외가 실제로 템플릿에 있는지 확인하는 케이스 추가.
+
+## 18. Storybook은 설치 시 의향만 물어 config에 기록한다 (Option A)
+
+Storybook을 CLI 설치 시 즉시 `npx storybook init`으로 설치하는 안(Option B)은 결정 #2에서
+이미 배제했다 — UI 작업 없는 저장소도 대상이며, 공식 CLI가 프로젝트를 보고 생성하게
+맡기는 편이 안전하다. 다만 `/ds-init` 온디맨드 설치를 전제로 하면 **의향 자체를 기록하지
+않은** 탓에 heavy gates(story 필수, a11y error)를 언제 켜야 하는지 판단 기준이 없었다.
+
+그래서 CLI 프롬프트에 "Storybook을 사용할 계획인가요?" 질문을 추가하고, 답을 `.harness/config.json`의
+`storybook: "off" | "pending" | "ready"` 필드에 저장한다:
+
+- `off` — 의향 없음, Storybook 관련 체크를 전부 끈다
+- `pending` — 의향 있음, 아직 미설치 (기본값). `/ds-init` 성공 시 `ready`로 승격
+- `ready` — 설치 완료, story 요구사항·a11y error·test-storybook checks 활성화
+
+`--yes` 비대화형 경로에서는 `design-system` 모듈이 선택되면 `pending`, 없으면 `off`를
+기본값으로 둔다.
+
+## 19. Brownfield baseline을 Atomic 계층 강제에도 적용한다
+
+결정 #10(stylelint 유예 목록)과 같은 원리를 Atomic 계층 강제에도 적용한다. 페이지/라우트
+파일에서 `<button>`, `<input>` 같은 intrinsic elements를 직접 쓰는 것을 ESLint `no-restricted-syntax`로
+error 처리하되, **기존 프로젝트가 이미 쓰고 있던 페이지 파일 목록**을 `.harness/atomic-baseline.json`에
+기록해 그 파일들만 warning으로 낮춘다.
+
+감지 대상 태그: `button`, `input`, `select`, `textarea`, `form`, `a`, `div`, `span`, `p`,
+`h1~h6`, `ul`, `ol`, `li`, `table`, `tr`, `td`, `th`, `img`, `video`, `audio`, `canvas`, `svg`
+(Atomic 계층으로 추상화해야 하는 대표적인 UI 요소들)
+
+스캔 경로: `src/pages/`, `src/routes/`, `src/App.tsx`, `src/app/page.tsx` (react-router v6
+및 Next.js App Router 관례 기준)
+
+이 규칙은 `design-system` + `lint` 모듈이 둘 다 켜진 경우에만 강제된다 — ESLint 규칙이므로
+lint 모듈이 전제이고, Atomic 계층 자체가 design-system 모듈의 구조다.
+
+## 20. 페이지 raw JSX 금지는 "조기 게이트"로서 실효성이 크다
+
+제품 목표 #2(Early ban on raw JSX in pages)가 요구한 것은 "Atomic 재작성을 늦게 하지 않게
+막는 조기 게이트"다. story 필수나 역방향 import 금지보다 **먼저** 걸리는 규칙이어야 의미가 있다:
+
+- story 필수는 Storybook `ready` 상태가 전제 → `/ds-init` 이후
+- 역방향 import는 이미 계층이 나뉘어 있다는 전제 → 이미 Atomic 계층을 도입한 뒤
+- **페이지 raw JSX 금지는 Atomic 계층 도입 전부터 걸린다** → 게이트가 없어도 되는 환경에서
+  미리 습관을 만드는 셈이다
+
+그래서 이 규칙은 `design-system` + `lint` 모듈만 켜지면 즉시 활성화되고, Storybook 상태와
+무관하다. 기존 프로젝트의 페이지가 이미 intrinsic elements를 수십 개 쓰고 있어도 baseline으로
+grandfather 처리하므로 첫 커밋이 막히지 않는다.
+
+## 21. 버전 0.3.0 — Storybook 의향 기록 + 조기 Atomic 게이트
+
+이번 릴리스는 다음을 포함한다:
+
+- Storybook 상태 3단계(`off` / `pending` / `ready`)를 config에 저장
+- 페이지 파일에서 raw intrinsic elements 사용 금지 ESLint 규칙
+- `.harness/atomic-baseline.json` brownfield 유예 목록 (stylelint와 같은 방식)
+- 감지 로직: 기존 페이지 파일 중 `<button>` 등을 이미 쓰고 있던 것 자동 스캔
+
+새 기능이 사용자에게 명시적으로 노출되므로(프롬프트 추가, 새 규칙 에러) minor 버전 bump.
+
+git 태그는 PR 병합 후 `v0.3.0`으로 생성 권장. npm publish는 maintainer가 병합 후 수동 실행:
+
+```bash
+git tag v0.3.0
+git push origin v0.3.0
+npm publish
+```

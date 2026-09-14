@@ -22,7 +22,8 @@ Requires Node.js 20+.
 - **Workflows** — `/spec` → `/impl` → `/verify` → `/ship`, plus `/ds-init`, `/ds-add`, `/ux-review` when the design-system module is on
 - **Commit gate** — shared script wired to Cursor `beforeShellExecution` and Claude `PreToolUse` (blocks failed checks, staged `.env`, `--no-verify`, force push)
 - **Reference code** — axios instance, `ProtectedRoute`, TanStack Query 3-layer example, Zustand store (compile-ready, not prose)
-- **Lint enforcement** — naming, public API boundaries, Atomic layer imports, color tokens via stylelint
+- **Lint enforcement** — naming, public API boundaries, Atomic layer imports (early page raw JSX ban), color tokens via stylelint
+- **Brownfield baselines** — existing violations (raw colors, raw page JSX) grandfathered as warnings; new code stays strict
 
 Existing files are never overwritten. Conflicts land under `.harness/incoming/`. Every write is recorded in `.harness/manifest.json`.
 
@@ -56,7 +57,8 @@ Use `--modules` to force inclusion. Dropping a module also drops the rules and w
 
 - **Docs suggest. Gates enforce.** Prefer checks and lint errors over hoping the agent reads a paragraph.
 - **Design tokens + stylelint** are the reliable way to stop UI drift; Atomic layer reverse-imports are ESLint errors.
-- **Storybook is on-demand** (`/ds-init`) — not installed up front.
+- **Storybook is on-demand** (`/ds-init`) — CLI asks intent only (off/pending), not installed up front.
+- **Brownfield-friendly** — existing violations go into baseline files (warning), new code stays strict (error).
 - Design rationale lives in [`DECISIONS.md`](./DECISIONS.md).
 
 ## Develop
