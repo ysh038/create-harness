@@ -139,13 +139,13 @@ atom                  ← 더 못 쪼개는 최소 단위. 토큰만 사용 (But
   organism/template을 조립하고 훅을 호출하는 자리다. 마크업·스타일을 여기에 쓰지 않는다.
 
 ```
-design-system/organisms/  ← 범용 organism (CardList, Modal, FormGroup 등)
-       ↑
-components/{Domain}/      ← 도메인 organism (ReviewCard, UserProfile 등)
+routes / pages            ← 조립 + 훅 호출만
        ↑
 components/layouts/       ← template (슬롯 기반 레이아웃)
        ↑
-routes / pages            ← 조립 + 훅 호출만
+components/{Domain}/      ← 도메인 organism (ReviewCard, UserProfile 등)
+       ↑
+design-system/organisms/  ← 범용 organism (CardList, Modal, FormGroup 등)
 ```
 
 도메인 타입이 props로 들어오는 순간 그 컴포넌트는 `design-system/`을 떠난다.

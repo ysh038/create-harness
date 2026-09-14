@@ -82,13 +82,13 @@ import { fetchExampleList } from '../../queries/Example/exampleApi'
   organism/template을 조립하고 훅을 호출하되 자체 마크업·스타일을 최소화한다.
 
 ```
-design-system/{atoms,molecules,organisms}  ← 도메인 비의존, 범용 재사용
-       ↑
-components/{Domain}                        ← 도메인 organism (예: ReviewCard)
+routes / pages                             ← 조립 + 훅 호출
        ↑
 components/layouts                         ← template (슬롯 기반 레이아웃)
        ↑
-routes / pages                             ← 조립 + 훅 호출
+components/{Domain}                        ← 도메인 organism (예: ReviewCard)
+       ↑
+design-system/{atoms,molecules,organisms}  ← 도메인 비의존, 범용 재사용
 ```
 
 도메인이 들어오면 `design-system/`을 떠나고, 데이터를 가져오면 컴포넌트가 아니라
