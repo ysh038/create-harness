@@ -21,6 +21,35 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 - 검증 목록은 `.harness/config.json` 의 `checks` 배열이다. 체크를 추가/제거하려면 이 파일을 수정한다.
 - 테스트를 통과시키기 위해 단정문(assertion)을 약화시키지 않는다. 실패하면 코드를 고친다.
 
+## 디자인 모드 및 코딩 스타일
+
+- **디자인 모드**: `{{DESIGN_MODE}}`{{#if DESIGN_FIDELITY}} (충실도: `{{DESIGN_FIDELITY}}`){{/if}}
+- **컴포넌트 선언**: `{{COMPONENT_DECLARATION}}`
+- **컴포넌트 export**: `{{COMPONENT_EXPORT}}`
+- **스타일링**: `{{STYLING}}`
+
+디자인 모드별 행동:
+- `free` — 디자인 참조 없이 자율 구현
+- `inspire` — 디자인을 영감으로 활용, 재해석 허용
+- `implement` — 제공된 디자인과 최대한 일치, 자유로운 재디자인 금지
+
+{{#if HAS_DESIGN_REFS}}
+### 디자인 참조 맵
+
+`.harness/design-references.json` — 에이전트가 관리하는 Figma 링크 레지스트리.
+- `implement` 모드에서는 링크된 디자인에서 벗어나지 않는다
+- `/ds-add` 실행 시 컴포넌트별 Figma 링크를 물어볼 수 있다 (있음/없음/나중에)
+- Figma 접근은 사용자 MCP 설정으로 제공 (CLI가 API 키를 다루지 않음)
+- 링크를 붙일 땐 Figma URL만 붙여넣으면 됨 (JSON 편집 불필요)
+{{/if}}
+
+### 코딩 스타일 준수
+
+위에 명시된 스타일 선호를 **항상** 따른다:
+- 컴포넌트 선언: `{{COMPONENT_DECLARATION}}` 키워드 사용
+- export: `{{COMPONENT_EXPORT}}` 방식 사용
+- 스타일: `{{STYLING}}` 패턴 사용
+
 ## 워크플로
 
 | 커맨드 | 용도 |
@@ -32,7 +61,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
 | `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + 스토리 선행 추가 |
 | `/ux-review` | 인터랙션 상태·토큰 사용·시각적 완성도 리뷰 — 테스트로 못 옮기는 품질을 다룬다 |
-{{/if}}
+{{#if HAS_DESIGN_REFS}}| `/ds-ref` | 디자인 소스 등록 및 참조 맵 관리 |
+{{/if}}{{/if}}
 
 ## 절대 금지
 

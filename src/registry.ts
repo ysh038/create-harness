@@ -72,6 +72,12 @@ export const buildVars = (
     ATOMIC_BASELINE: String(hasAtomicBaseline(detected, options)),
     PAGE_RAW_JSX_FILES: String(detected.pagesWithRawJsx.length),
     STORYBOOK_STATE: options.storybook,
+    DESIGN_MODE: options.mode,
+    HAS_DESIGN_REFS: String(options.mode !== 'free'),
+    DESIGN_FIDELITY: options.fidelity ?? '',
+    COMPONENT_DECLARATION: options.style.componentDeclaration,
+    COMPONENT_EXPORT: options.style.componentExport,
+    STYLING: options.style.styling,
 })
 
 /**
@@ -164,6 +170,8 @@ const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship']
 const DESIGN_SYSTEM_SETUP_WORKFLOWS = ['ds-init', 'ds-add']
 // ux-review는 목적이 달라(진행 중인 UI 품질 리뷰) 독립 스킬로 둔다
 const DESIGN_SYSTEM_REVIEW_WORKFLOWS = ['ux-review']
+// ds-ref는 디자인 참조 맵 관리 (inspire/implement 모드에서만)
+const DESIGN_REF_WORKFLOWS = ['ds-ref']
 
 /** templates/core/workflows → .cursor/commands + .claude/skills(SKILL.md) fan-out */
 const buildWorkflowActions = (
@@ -178,7 +186,14 @@ const buildWorkflowActions = (
     const designSystemWorkflows = hasDesignSystem
         ? [...DESIGN_SYSTEM_SETUP_WORKFLOWS, ...DESIGN_SYSTEM_REVIEW_WORKFLOWS]
         : []
-    const workflows = [...BASE_WORKFLOWS, ...designSystemWorkflows]
+    // ds-ref는 디자인 참조가 활성화된 경우에만 (inspire/implement 모드)
+    const designRefWorkflows =
+        hasDesignSystem && options.mode !== 'free' ? DESIGN_REF_WORKFLOWS : []
+    const workflows = [
+        ...BASE_WORKFLOWS,
+        ...designSystemWorkflows,
+        ...designRefWorkflows,
+    ]
 
     for (const name of workflows) {
         parsed.set(name, parseFrontmatter(loadTemplate(`core/workflows/${name}.md`, vars)))
@@ -236,6 +251,21 @@ const buildWorkflowActions = (
                         }) + body,
                     module: 'core',
                 })
+            }
+            // ds-ref는 별도 스킬 (디자인 참조 맵 관리)
+            if (options.mode !== 'free') {
+                for (const name of DESIGN_REF_WORKFLOWS) {
+                    const { meta, body } = parsed.get(name)!
+                    actions.push({
+                        dest: `.claude/skills/${name}/SKILL.md`,
+                        content:
+                            serializeFrontmatter({
+                                name,
+                                description: meta['description'] ?? '',
+                            }) + body,
+                        module: 'core',
+                    })
+                }
             }
         }
     }
@@ -454,6 +484,10 @@ export const buildPlan = (
         packageManager: detected.packageManager,
         checks: buildChecks(detected, options),
         storybook: options.storybook,
+        mode: options.mode,
+        fidelity: options.fidelity,
+        style: options.style,
+        disclaimerAcceptedAt: options.acceptDisclaimer ? new Date().toISOString() : null,
     }
 
     const actions: IFileAction[] = [
@@ -473,6 +507,32 @@ export const buildPlan = (
         ...buildDocActions(vars),
         ...buildModuleActions(detected, options, vars),
     ]
+
+    // design-references.json 생성 (mode가 free가 아니거나 figma URL이 있을 때)
+    if (options.mode !== 'free' || options.figmaUrl) {
+        const designRefs: import('./types.js').IDesignReferences = {
+            version: 1,
+            mode: options.mode,
+            fidelity: options.fidelity,
+            disclaimerAcceptedAt: options.acceptDisclaimer ? new Date().toISOString() : null,
+            sources: options.figmaUrl
+                ? [
+                      {
+                          id: 'primary',
+                          label: 'Primary Design File',
+                          fileUrl: options.figmaUrl,
+                          role: 'primary',
+                      },
+                  ]
+                : [],
+            entries: [],
+        }
+        actions.push({
+            dest: '.harness/design-references.json',
+            content: JSON.stringify(designRefs, null, 4) + '\n',
+            module: 'core',
+        })
+    }
 
     if (options.agents.includes('claude')) {
         actions.splice(1, 0, {

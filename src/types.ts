@@ -48,10 +48,26 @@ export interface ICheck {
 
 export type TStorybookState = 'off' | 'pending' | 'ready'
 
+export type TDesignMode = 'free' | 'inspire' | 'implement'
+export type TFidelity = 'inspire' | 'match' | 'strict' | null
+export type TComponentDeclaration = 'function' | 'arrow'
+export type TComponentExport = 'default' | 'named'
+export type TStyling = 'css-modules' | 'tailwind' | 'detected'
+
+export interface ICodingStyle {
+    componentDeclaration: TComponentDeclaration
+    componentExport: TComponentExport
+    styling: TStyling
+}
+
 export interface IHarnessConfig {
     packageManager: TPackageManager
     checks: ICheck[]
     storybook: TStorybookState
+    mode: TDesignMode
+    fidelity: TFidelity
+    style: ICodingStyle
+    disclaimerAcceptedAt: string | null
 }
 
 export interface IScaffoldOptions {
@@ -63,6 +79,16 @@ export interface IScaffoldOptions {
     ponytail: boolean
     /** Storybook 사용 의향 — CLI 설치 시 결정 */
     storybook: TStorybookState
+    /** 프로젝트 디자인 모드 */
+    mode: TDesignMode
+    /** 디자인 충실도 (mode에 따라 기본값 다름) */
+    fidelity: TFidelity
+    /** 코딩 스타일 선호 */
+    style: ICodingStyle
+    /** Figma 파일 URL (선택) */
+    figmaUrl?: string
+    /** 면책 조항 수락 */
+    acceptDisclaimer: boolean
     dryRun: boolean
     yes: boolean
     install: boolean
@@ -96,4 +122,49 @@ export interface IManifest {
         sha256: string
         module: string
     }[]
+}
+
+export type TComponentKind =
+    | 'atom'
+    | 'molecule'
+    | 'organism'
+    | 'layout'
+    | 'page'
+    | 'flow'
+    | 'token'
+
+export type TReferenceStatus =
+    | 'linked'
+    | 'needed'
+    | 'inspire-only'
+    | 'waived'
+    | 'broken'
+
+export interface IDesignSource {
+    id: string
+    label: string
+    fileUrl: string
+    role: 'primary' | 'secondary'
+}
+
+export interface IDesignEntry {
+    id: string
+    kind: TComponentKind
+    codePath: string
+    figma?: {
+        url: string
+        nodeId?: string
+        label?: string
+    }
+    status: TReferenceStatus
+    notes?: string
+}
+
+export interface IDesignReferences {
+    version: 1
+    mode: TDesignMode
+    fidelity: TFidelity
+    disclaimerAcceptedAt: string | null
+    sources: IDesignSource[]
+    entries: IDesignEntry[]
 }
