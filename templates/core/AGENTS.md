@@ -78,6 +78,33 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
+## 설치·설정 질문이 비어 있을 때
+
+에이전트가 `create-harness-cli`를 실행하려는데 사용자가 답변을 미리 지정하지 않았다면:
+
+1. **CLI와 같은 설치 질문을 채팅에서 먼저 물어본다** (`/harness-setup` 참고):
+   - 프로젝트 유형(`mode`): 자유롭게 / 톤만 참고 / 회사·피그마 맞추기
+   - 코딩 스타일: 선언(function|arrow), export(default|named), 스타일(필요 시)
+   - inspire/implement면 피그마 파일 URL(선택) + 면책 확인
+   - 대상 에이전트: Cursor and/or Claude Code
+   - 포함 모듈: design-system, auth-http, data-fetching, lint (core는 항상 포함)
+{{#if DESIGN_SYSTEM}}   - Storybook 계획 (design-system 선택 시): 사용 의향 있으면 `pending`, 없으면 `off`
+{{/if}}   - ponytail 설치 여부
+2. 답을 받으면 **명시적 플래그와 함께 `-y`로 CLI를 실행**한다
+   - 예: `--mode implement --component-declaration function --component-export default --agents cursor --modules design-system,lint --storybook pending --figma-url … --accept-disclaimer -y`
+   - 명시적 플래그 + `-y`는 "묻지 말고 이 값들 사용" (조용한 기본값 아님)
+   - 값 없이 `-y`만 쓰면 안 됨
+3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
+{{#if DESIGN_SYSTEM}}4. 디자인 화면 작업은 `/ds-add`{{#if HAS_DESIGN_REFS}}·`/ds-ref`{{/if}} — implement면 피그마 링크를 맵에 쌓는다
+{{/if}}
+{{#if DESIGN_SYSTEM}}
+
+**Storybook 상태별 처리**:
+- `off`: `/ds-init` 실행 전 사용자에게 확인 — 동의 시에만 설치 진행
+- `pending`: 첫 UI 작업 시 `/ds-init` 실행 가능 (확인 권장, 필수 아님)
+- `ready`: 이미 설치됨, 추가 확인 불필요
+{{/if}}
+
 ## 장기 기억 문서
 
 | 파일 | 용도 |
