@@ -45,12 +45,13 @@ Existing files are never overwritten. Conflicts land under `.harness/incoming/`.
 npx create-harness-cli [dir] [options]
 
 --preset <name>                preset (currently: react-fe)
+--lang <lang>                  installation language en|ko (kr is alias for ko)
 --agents <csv>                 cursor,claude (default: both)
 --modules <csv>                design-system,auth-http,data-fetching,lint
 --ponytail                     optional YAGNI ladder rules from ponytail
 --mode <mode>                  free|inspire|implement (default: free)
 --component-declaration <type> function|arrow (default: function)
---component-export <type>      default|named (default: default)
+--component-export <type>      default|named (default: default, not asked in interactive)
 --styling <type>               css|css-modules|tailwind (when not detected)
 --figma-url <url>              Figma file URL (optional)
 --accept-disclaimer            design reference liability disclaimer
@@ -59,11 +60,12 @@ npx create-harness-cli [dir] [options]
 ```
 
 Interactive runs also ask:
+- **Language**: Korean or English
 - **Design mode**: free (no design reference) / inspire (redesign allowed) / implement (match Figma closely)
-- **Coding style**: component declaration, export pattern, styling approach
+- **Coding style**: component declaration, styling approach (componentExport defaults to 'default', not asked)
 - **Storybook intent**: `off` / `pending` in `.harness/config.json` (use `/ds-init` later to install and set `ready`)
 
-Optional flags for power users (`--figma-url` / `--accept-disclaimer`) skip prompts; interactive install does not ask for Figma URLs at setup.
+**Note**: `--ponytail` flag is available but no longer asked in interactive mode (power user feature only).
 
 ### Config file format (--config)
 
@@ -71,6 +73,7 @@ JSON file matching CLI flags:
 
 ```json
 {
+  "lang": "ko",
   "mode": "free",
   "agents": ["cursor", "claude"],
   "modules": ["design-system", "lint"],

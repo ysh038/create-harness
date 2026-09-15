@@ -19,7 +19,7 @@ import {
     requiredDevDeps,
 } from './registry.js'
 import { recommendedModules, suggestModules } from './suggest.js'
-import type { IScaffoldOptions, TAgent, TModule } from './types.js'
+import type { IScaffoldOptions, TAgent, TModule, TLanguage } from './types.js'
 
 const VALID_AGENTS: TAgent[] = ['cursor', 'claude']
 const VALID_MODULES: TModule[] = [
@@ -42,6 +42,7 @@ interface IConfigFile {
     acceptDisclaimer?: boolean
     dryRun?: boolean
     install?: boolean
+    lang?: 'ko' | 'en'
 }
 
 const getOwnVersion = (): string => {
@@ -79,6 +80,7 @@ const main = async (): Promise<void> => {
     const { values, positionals } = parseArgs({
         options: {
             preset: { type: 'string', default: 'react-fe' },
+            lang: { type: 'string' },
             agents: { type: 'string' },
             modules: { type: 'string' },
             storybook: { type: 'string' },
@@ -107,6 +109,7 @@ const main = async (): Promise<void> => {
 
 옵션:
   --preset <name>                프리셋 (기본: react-fe)
+  --lang <lang>                  설치 언어 en|ko (kr은 ko의 별칭)
   --agents <csv>                 cursor,claude (기본: 둘 다)
   --modules <csv>                design-system,auth-http,data-fetching,lint
   --storybook <state>            off|pending (design-system 모듈 선택 시만 유효)
@@ -170,6 +173,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
                 'acceptDisclaimer',
                 'dryRun',
                 'install',
+                'lang',
             ])
             for (const key of Object.keys(configFile)) {
                 if (!validKeys.has(key)) {
@@ -187,6 +191,22 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
 
     const suggestions = suggestModules(detected)
     const explicitModules = parseCsv(values.modules, VALID_MODULES, 'module')
+
+    // lang 검증: ko (kr 별칭 허용) 또는 en
+    let explicitLang: TLanguage | undefined = undefined
+    const langRaw = (values.lang ?? configFile.lang) as string | undefined
+    if (langRaw) {
+        if (langRaw === 'kr') {
+            explicitLang = 'ko' // kr을 ko의 별칭으로 허용
+        } else if (langRaw === 'ko' || langRaw === 'en') {
+            explicitLang = langRaw as TLanguage
+        } else {
+            console.error(
+                `알 수 없는 lang: "${langRaw}" (가능한 값: en, ko, kr)`,
+            )
+            process.exit(1)
+        }
+    }
 
     // mode 검증
     const explicitMode =
@@ -295,6 +315,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
             values['accept-disclaimer'] ?? configFile.acceptDisclaimer ?? false,
         dryRun: values['dry-run'] ?? configFile.dryRun ?? false,
         install: values.install ?? configFile.install ?? false,
+        lang: explicitLang,
     }
 
     // TTY 체크: interactive vs explicit-only
@@ -303,6 +324,11 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
     if (!isTTY) {
         // Non-TTY: 모든 필수 답변 검증
         const missing: string[] = []
+
+        // lang는 non-TTY에서 필수 (명시적 정책)
+        if (!explicitLang) {
+            missing.push('--lang (en|ko)')
+        }
 
         if (!explicitMode && !configFile.mode) {
             missing.push('--mode (free|inspire|implement)')
@@ -318,9 +344,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
         if (detected.isReact && !declType && !configFile.componentDeclaration) {
             missing.push('--component-declaration (function|arrow)')
         }
-        if (!exportType && !configFile.componentExport) {
-            missing.push('--component-export (default|named)')
-        }
+        // componentExport는 v0.5.0부터 필수 아님 (기본값 default)
         if (
             !stylingType &&
             !detected.hasTailwind &&
@@ -344,7 +368,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
                     missing.map((m) => `  - ${m}`).join('\n') +
                     '\n\n예시 명령:\n' +
                     pc.dim(
-                        `  npx create-harness-cli ${targetDir} --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function --component-export default\n`,
+                        `  npx create-harness-cli ${targetDir} --lang ko --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function\n`,
                     ) +
                     '\n또는 설정 파일 사용:\n' +
                     pc.dim(`  npx create-harness-cli ${targetDir} --config config.json\n`),
@@ -358,7 +382,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
                     missing.map((m) => `  - ${m}`).join('\n') +
                     '\n\nExample command:\n' +
                     pc.dim(
-                        `  npx create-harness-cli ${targetDir} --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function --component-export default\n`,
+                        `  npx create-harness-cli ${targetDir} --lang en --mode free --agents cursor --modules design-system,lint --storybook pending --component-declaration function\n`,
                     ) +
                     '\nOr use config file:\n' +
                     pc.dim(`  npx create-harness-cli ${targetDir} --config config.json\n`),
@@ -368,7 +392,7 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
     }
 
     const options = isTTY
-        ? await runPrompts(detected, defaults, suggestions)
+        ? await runPrompts(detected, defaults, suggestions, explicitLang)
         : defaults
 
     // 감지 때문에 빠진 모듈은 이유를 남긴다

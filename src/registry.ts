@@ -489,6 +489,7 @@ export const buildPlan = (
         fidelity: options.fidelity,
         style: options.style,
         disclaimerAcceptedAt: options.acceptDisclaimer ? new Date().toISOString() : null,
+        lang: options.lang,
     }
 
     const actions: IFileAction[] = [
