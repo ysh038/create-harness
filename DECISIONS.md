@@ -922,3 +922,132 @@ npm publish는 PR 병합 후 수동 (자동 배포 없음).
 - 에이전트 문서: 채팅 → 플래그/config로 CLI 실행 (no `-y`)
 - 테스트 통과
 
+## 28. 버전 0.5.0 — UX 설문 개선: 언어 우선, ponytail/export 묻지 않기, 모듈 설명 개선
+
+### 배경 (dogfood 피드백)
+
+실제 사용자(비개발자 포함)로부터 받은 피드백:
+
+1. **언어 선택이 중간에 묻는다** — 한국어/영어 질문이 프로젝트 감지 로그 후에 나와 늦게 느껴짐
+2. **ponytail 질문이 매번 나온다** — 대부분 사용자가 모르는 서드파티 규칙을 필수처럼 물어봄
+3. **component export 질문도 매번** — 실무에서 `export default` 가 압도적 다수, 대부분 그냥 엔터 침
+4. **모듈 레이블이 엔지니어 용어** — "stylelint 토큰 강제", "queries 3계층" 같은 용어가 비개발자에게 불명확
+5. **Storybook 설명 부족** — "Storybook을 사용할 계획인가요?" 만으로는 뭔지 모름
+
+### 해결 방안
+
+#### A. 언어를 맨 처음 질문으로
+
+프로젝트 감지 전에 언어부터 물어 나머지 프롬프트를 선택한 언어로 실행한다:
+- 새 질문: "어떤 언어로 설치를 진행할까요? / Which language would you like to use for installation?"
+- 선택: 한국어 (Korean) / English
+- `--lang en|ko` 플래그 추가 (`kr` 은 `ko` 별칭으로 허용)
+- Non-TTY 환경에서 `--lang` 필수 (명시적 정책, 기본값 없음)
+- `.harness/config.json` 에 `lang` 필드 저장
+
+#### B. ponytail 질문 제거
+
+ponytail(YAGNI 사다리)은 이 하네스와 별개 서드파티 규칙이라 대부분 사용자에게 노이즈다:
+- Interactive prompt에서 ponytail 질문 완전 제거
+- `--ponytail` 플래그는 남김 (power user용)
+- 명시적 플래그 없으면 `false` 기본값
+- AGENTS.md / harness-setup.md 에서 ponytail 질문 제거
+
+#### C. component export 질문 제거
+
+`export default` 가 실무 압도적 다수(React DevTools 호환성 최고):
+- Interactive prompt에서 componentExport 질문 완전 제거
+- `componentExport: 'default'` 기본값 사용
+- `--component-export` 플래그는 남김 (optional)
+- Non-TTY 필수 검증에서 `--component-export` 제거
+
+#### D. 모듈 레이블 plain-language 재작성
+
+엔지니어 용어 대신 목적 중심 설명:
+- `design-system`: "디자인 토큰, Atomic UI 계층, stylelint 색상 차단, 스토리 템플릿 — **UI를 재사용 가능한 부품으로 정리**"
+- `auth-http`: "로그인/세션 HTTP 헬퍼 (axios 인터셉터, ProtectedRoute) — **앱에 인증 API가 있을 때만 유용**"
+- `data-fetching`: "TanStack Query + 샘플 API 계층 + Zustand 알림 저장소 — **서버 상태 패턴**"
+- `lint`: "ESLint/prettier/commitlint **네이밍·import 경계 게이트**"
+
+영어 버전도 동일 방향으로 작성 (organize UI into reusable components, useful only if app has auth API 등)
+
+#### E. Storybook 설명 추가
+
+confirm 전에 짧은 설명:
+- 한국어: "Storybook — 컴포넌트를 전체 앱과 분리하여 미리보는 갤러리입니다. UI 컴포넌트를 단독으로 확인하고 디자이너와 협업할 때 유용합니다. 지금 설치하지 않고 의향만 기록하면, /ds-init 워크플로가 나중에 설치합니다."
+- 영어: "Storybook — A separate gallery where you preview UI components alone (not the full app). Useful to check the design system and collaborate with designers. Choosing yes records intent (pending); actual install can happen later via /ds-init."
+
+### 구현 상세
+
+#### 새 파일: `src/i18n.ts`
+
+모든 프롬프트 문자열을 `ko` / `en` 맵으로 중앙화:
+```typescript
+export type TLanguage = 'ko' | 'en'
+export const MESSAGES = {
+  ko: { intro: 'create-harness', modePrompt: '이 프로젝트는...', ... },
+  en: { intro: 'create-harness', modePrompt: 'What kind of work...', ... }
+}
+```
+
+#### `src/prompts.ts` 변경
+
+1. `runPrompts(detected, defaults, suggestions, explicitLang?)`
+2. 언어 질문을 맨 처음으로 (`explicitLang` 있으면 skip)
+3. ponytail confirm 제거 → `defaults.ponytail` 사용
+4. componentExport select 제거 → `defaults.style.componentExport` 사용
+5. MODULE_LABELS를 i18n 함수로 교체
+6. Storybook confirm 전에 `p.log.info(msg.storybookInfo)` 추가
+7. 반환값에 `lang` 추가
+
+#### `src/cli.ts` 변경
+
+1. `--lang <en|ko>` 플래그 추가, `kr` → `ko` 별칭 변환
+2. IConfigFile에 `lang?: 'ko' | 'en'` 추가
+3. Non-TTY 필수 검증: `--lang` 필수 추가, `--component-export` 제거
+4. `runPrompts()` 호출 시 `explicitLang` 전달
+5. help text 업데이트
+
+#### `src/types.ts` 변경
+
+- `TLanguage = 'ko' | 'en'` 추가
+- `IHarnessConfig.lang?: TLanguage` 추가
+- `IScaffoldOptions.lang?: TLanguage` 추가
+
+#### `src/registry.ts` 변경
+
+- `buildPlan()` 에서 `config.lang = options.lang` 저장
+
+#### Templates 변경
+
+- `templates/core/AGENTS.md`: 설치 질문 예시에서 ponytail·export 제거, lang 추가
+- `templates/core/workflows/harness-setup.md`: Q 번호 재조정 (언어 Q1으로), ponytail·export 제거
+
+#### README 변경
+
+- `--lang` 플래그 설명
+- `--ponytail` / `--component-export` 는 power-user 선택으로 명시
+- config file 예시에 `lang` 추가
+
+#### 테스트 변경
+
+- 스냅샷 재생성 (질문 순서 변경)
+- Non-TTY 필수 검증 테스트: `--component-export` 누락은 OK, `--lang` 누락은 에러
+
+### 범위 밖
+
+- 전체 CLI 출력 메시지 번역 (예: "생성 완료", "충돌" 같은 중간 출력) — 프롬프트만 이중 언어화
+- npm publish
+
+### 버전
+
+`package.json` → **0.5.0** (minor bump — 프롬프트 경험 변경, 하위 호환 깨짐 없음)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- Interactive 실행: 언어 → mode → declaration → styling → agents → modules → storybook (ponytail·export 없음)
+- Non-TTY: `--lang` 필수, `--component-export` 선택
+- 한국어/영어 모두 테스트
+- PR 생성
+

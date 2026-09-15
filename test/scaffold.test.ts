@@ -626,7 +626,7 @@ describe('non-TTY 필수 답변 검증', () => {
         )
 
         const output = execSync(
-            `node ${path.resolve(__dirname, '../dist/cli.js')} ${tmp} --mode free --agents cursor --modules lint --component-export default --styling css --dry-run`,
+            `node ${path.resolve(__dirname, '../dist/cli.js')} ${tmp} --lang ko --mode free --agents cursor --modules lint --styling css --dry-run`,
             {
                 encoding: 'utf-8',
                 stdio: ['ignore', 'pipe', 'pipe'],

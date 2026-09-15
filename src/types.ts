@@ -4,6 +4,8 @@ export type TAgent = 'cursor' | 'claude'
 
 export type TModule = 'design-system' | 'auth-http' | 'data-fetching' | 'lint'
 
+export type TLanguage = 'ko' | 'en'
+
 export interface IDetectResult {
     targetDir: string
     hasPackageJson: boolean
@@ -70,6 +72,7 @@ export interface IHarnessConfig {
     fidelity: TFidelity
     style: ICodingStyle
     disclaimerAcceptedAt: string | null
+    lang?: TLanguage
 }
 
 export interface IScaffoldOptions {
@@ -93,6 +96,8 @@ export interface IScaffoldOptions {
     acceptDisclaimer: boolean
     dryRun: boolean
     install: boolean
+    /** 설치 언어 (v0.5.0) */
+    lang?: TLanguage
 }
 
 export interface IFileAction {
