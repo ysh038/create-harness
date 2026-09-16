@@ -51,6 +51,15 @@ try {
     respond('allow')
 }
 
+// tool_name이 있으면 Write/StrReplace/Edit만 체크
+if (input.tool_name) {
+    const writeTools = ['Write', 'StrReplace', 'Edit']
+    if (!writeTools.includes(input.tool_name)) {
+        // Shell, Read 등 다른 도구는 허용
+        respond('allow')
+    }
+}
+
 // 프로젝트 루트 찾기
 const findProjectRoot = (startPath) => {
     let current = startPath
@@ -64,14 +73,17 @@ const findProjectRoot = (startPath) => {
 }
 
 // 파일 경로 추출 (도구마다 다른 필드명 대응)
+// Cursor: { tool_name: "Write", tool_input: { path: "..." } }
+// Claude: { tool_input: { command: "..." } } (for Bash) or tool_input with path
 const extractFilePath = (input) => {
-    const toolInput = tool === 'claude' ? input.tool_input : input
+    // tool_input이 있으면 우선 사용 (Cursor와 Claude 공통)
+    const toolInput = input.tool_input ?? input
     if (!toolInput) return null
     
     // Write: path 또는 file_path
     // StrReplace: path
-    // Edit: path 또는 file_path
-    return toolInput.path || toolInput.file_path || null
+    // Edit: path 또는 file_path 또는 target_file
+    return toolInput.path || toolInput.file_path || toolInput.target_file || null
 }
 
 const filePath = extractFilePath(input)
