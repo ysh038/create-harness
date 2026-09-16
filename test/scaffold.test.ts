@@ -210,6 +210,29 @@ describe('buildChecks', () => {
         )
     })
 
+    it('inspire/implement 모드에서는 design-ref-check를 맨 앞에 추가한다', () => {
+        const implementChecks = buildChecks(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+        })
+        expect(implementChecks[0].id).toBe('design-ref')
+        expect(implementChecks[0].command).toBe('node .harness/gates/design-ref-check.mjs')
+
+        const inspireChecks = buildChecks(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'inspire',
+        })
+        expect(inspireChecks[0].id).toBe('design-ref')
+    })
+
+    it('free 모드에서는 design-ref-check를 추가하지 않는다', () => {
+        const checks = buildChecks(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+        })
+        expect(checks.map((check) => check.id)).not.toContain('design-ref')
+    })
+
     it('스크립트가 없으면 해당 체크를 넣지 않는다', () => {
         const checks = buildChecks(
             fakeDetect({ scripts: {}, isTypeScript: false }),
@@ -293,6 +316,110 @@ describe('suggestModules — 감지 기반 기본 선택값', () => {
 })
 
 describe('design-system 모듈을 빼면 관련 산출물이 전부 빠진다', () => {
+    const withoutDs = (targetDir: string): IScaffoldOptions => ({
+        ...fullOptions(targetDir),
+        modules: ['auth-http', 'data-fetching', 'lint'],
+    })
+
+    it('규칙·워크플로·스킬·토큰 파일이 하나도 남지 않는다', () => {
+        const dests = buildPlan(fakeDetect(), withoutDs('/tmp/fake')).map(
+            (action) => action.dest,
+        )
+        expect(dests).not.toContain('.cursor/rules/30-design-system.mdc')
+        expect(dests).not.toContain('.cursor/commands/ds-init.md')
+        expect(dests).not.toContain('.cursor/commands/ds-add.md')
+        expect(dests).not.toContain('.cursor/commands/ux-review.md')
+        expect(dests).not.toContain('.claude/skills/design-system/SKILL.md')
+        expect(dests).not.toContain('.claude/skills/ux-review/SKILL.md')
+        expect(dests).not.toContain('src/design-system/tokens.css')
+        expect(dests).not.toContain('stylelint.config.js')
+        // 나머지 코어는 그대로 있어야 한다
+        expect(dests).toContain('.cursor/rules/00-core.mdc')
+        expect(dests).toContain('.cursor/commands/spec.md')
+    })
+
+    it('AGENTS.md 에 존재하지 않는 커맨드·규칙을 남기지 않는다', () => {
+        const plan = buildPlan(fakeDetect(), withoutDs('/tmp/fake'))
+        const agents = plan.find((action) => action.dest === 'AGENTS.md')!
+        expect(agents.content).not.toContain('/ds-init')
+        expect(agents.content).not.toContain('/ds-add')
+        expect(agents.content).not.toContain('/ux-review')
+        expect(agents.content).not.toContain('stylelint')
+        expect(agents.content).toContain('/spec')
+    })
+
+    it('design-system 을 포함하면 다시 나타난다 (ux-review 포함)', () => {
+        const dests = buildPlan(fakeDetect(), fullOptions('/tmp/fake')).map(
+            (action) => action.dest,
+        )
+        expect(dests).toContain('.cursor/rules/30-design-system.mdc')
+        expect(dests).toContain('.cursor/commands/ds-init.md')
+        expect(dests).toContain('.cursor/commands/ux-review.md')
+        expect(dests).toContain('.claude/skills/ux-review/SKILL.md')
+    })
+})
+
+describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () => {
+    it('inspire/implement 모드에서 design-ref-check.mjs를 생성한다', () => {
+        const implementPlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+        })
+        expect(
+            implementPlan.some(
+                (action) => action.dest === '.harness/gates/design-ref-check.mjs',
+            ),
+        ).toBe(true)
+
+        const inspirePlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'inspire',
+        })
+        expect(
+            inspirePlan.some(
+                (action) => action.dest === '.harness/gates/design-ref-check.mjs',
+            ),
+        ).toBe(true)
+    })
+
+    it('free 모드에서는 design-ref-check.mjs를 생성하지 않는다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+        })
+        expect(
+            plan.some(
+                (action) => action.dest === '.harness/gates/design-ref-check.mjs',
+            ),
+        ).toBe(false)
+    })
+
+    it('inspire/implement에서 config.json checks에 design-ref가 포함된다', () => {
+        const implementPlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+        })
+        const config = implementPlan.find(
+            (action) => action.dest === '.harness/config.json',
+        )!
+        const parsed = JSON.parse(config.content)
+        expect(parsed.checks[0].id).toBe('design-ref')
+    })
+
+    it('free 모드에서는 config.json checks에 design-ref가 없다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+        })
+        const config = plan.find(
+            (action) => action.dest === '.harness/config.json',
+        )!
+        const parsed = JSON.parse(config.content)
+        expect(parsed.checks.map((c: ICheck) => c.id)).not.toContain('design-ref')
+    })
+})
+
+describe('design-system 모듈을 빼면 관련 산출물이 전부 빠진다 (legacy)', () => {
     const withoutDs = (targetDir: string): IScaffoldOptions => ({
         ...fullOptions(targetDir),
         modules: ['auth-http', 'data-fetching', 'lint'],

@@ -108,7 +108,24 @@
 - [ ] `node-be` 프리셋
 - [ ] `monorepo` 프리셋
 
-## 논의 필요
+## v0.5.1
+
+- [x] Dogfood 실패 분석: implement 모드에서 디자인 참조 ask 건너뜀
+- [x] AGENTS.md 절대 금지에 디자인 참조 강제 규칙 추가
+- [x] AGENTS.md 디자인 화면 작업 섹션 강화 (타이밍·순서 명확화)
+- [x] ds-add.md 디자인 참조 확인을 step 0으로 이동
+- [x] ds-add.md "컴포넌트 만든 후 물어보기" 블록 제거
+- [x] templates/core/gates/design-ref-check.mjs 생성 (커밋 게이트 강제)
+- [x] src/registry.ts: buildGateActions에 design-ref-check.mjs 추가
+- [x] src/registry.ts: buildChecks에 design-ref check 추가
+- [x] DECISIONS.md #29 기록
+- [x] package.json 버전 0.5.1
+- [x] test/scaffold.test.ts: design-ref-check 테스트 추가
+- [x] npm run check 통과
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/11
+- [ ] npm publish (PR 병합 후)
+
+## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)
 
