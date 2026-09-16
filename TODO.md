@@ -134,8 +134,8 @@
 - [x] templates/core/gates/design-ref-check.mjs: inspire/implement 모드별 검증 강화
 - [x] package.json: 버전 0.5.2
 - [x] DECISIONS.md: #30 기록
-- [ ] npm run check 통과 (typecheck → build → test)
-- [ ] PR 생성 (main 대상)
+- [x] npm run check 통과 (typecheck → build → test) — 60/60 tests passed
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/12
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
