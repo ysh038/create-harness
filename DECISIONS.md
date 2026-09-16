@@ -1221,9 +1221,9 @@ readError?: string         // 실패 시 짧은 에러 메시지
 2. 없으면 → 물어봄: 「이 화면에 참고할 피그마/URL/캡처 있어요? (있음 / 없음 / 나중에)」
    - **있음** → URL/이미지 받아 **즉시 읽기 시도**
      * 성공 → `linked` + `lastReadOk: true` 기록, 진행
-     * 실패 → 다른 Figma 노드 URL 또는 스크린샷 요청, `waived` 허용
+     * 실패 → **STOP**. 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 명시적 waive)
    - **없음** → `waived` 기록, 진행 OK
-   - **나중에** → `needed` 기록, 진행 OK (inspire는 needed 허용)
+   - **나중에** → `needed` 기록, 진행 OK (inspire는 needed로 진행 허용)
 
 **`implement` 모드** (화면/페이지마다):
 1. 기존 항목 있으면 재질문 안 함 (단, 상태 검증은 커밋 게이트가 함)
@@ -1255,7 +1255,7 @@ readError?: string         // 실패 시 짧은 에러 메시지
 
 **inspire 모드**:
 - 새 페이지는 `linked` / `waived` / `needed` 중 하나 필요
-- `linked` 상태면 `lastReadOk` 체크 안 함 (inspire는 읽기 실패도 진행 허용)
+- `linked` 상태면 `lastReadOk` 체크 — `lastReadOk === false`면 실패 (inspire도 probe 실패는 불허)
 
 **implement 모드**:
 - 새 페이지는 다음 중 하나 필요:
@@ -1306,6 +1306,7 @@ readError?: string         // 실패 시 짧은 에러 메시지
   * implement 프로젝트: `linked` + `lastReadOk: false` 페이지 커밋 → 실패
   * implement 프로젝트: `waived` 페이지 커밋 → 통과
   * inspire 프로젝트: `needed` 상태 페이지 커밋 → 통과
+  * inspire 프로젝트: `linked` + `lastReadOk: false` 페이지 커밋 → 실패 (probe 실패는 inspire도 불허)
 
 ### 버전
 

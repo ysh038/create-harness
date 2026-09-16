@@ -46,7 +46,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
      * **없음** → `waived` 기록, 진행 OK
      * **나중에** → `needed` 기록, 진행 OK
      * **있음** → URL/이미지 받아 **즉시 읽기 시도**
-   - 읽기 실패 시 → **다른 링크/스크린샷 요청**, 진행 중단하지 않음 (inspire)
+   - 읽기 실패 시 → **STOP**. 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 명시적 waive)
 
 2. **`implement` 모드** — 화면/페이지마다:
    - 같은 타이밍에 물어봄 (inspire와 동일 질문)
@@ -126,8 +126,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
    - **답변에 따른 처리**:
      * **있음** → URL/이미지 받아 **즉시 읽기 시도**
        - **읽기 성공** → `linked` + `lastReadOk: true` 기록, UI 작업 진행 OK
-       - **읽기 실패** (inspire) → 다른 Figma 노드 URL 또는 스크린샷 요청, waive 허용
-       - **읽기 실패** (implement) → **STOP**. UI 작성하지 않음. 다른 링크/스크린샷 요청 또는 waive
+       - **읽기 실패** (inspire/implement 동일) → **STOP**. UI 작성하지 않음. 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 명시적 waive)
      * **없음** → `waived` 기록, 진행 OK (inspire/implement 모두 허용)
      * **나중에** → `needed` 기록
        - inspire: 진행 OK

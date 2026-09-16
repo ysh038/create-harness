@@ -100,11 +100,19 @@ for (const pageFile of newPageFiles) {
         continue
     }
 
-    // inspire 모드: linked / waived / needed 중 하나면 통과
+    // inspire 모드: linked / waived / needed 중 하나, 단 linked는 lastReadOk 체크
     if (mode === 'inspire') {
         const validStatuses = ['linked', 'waived', 'needed']
         if (!validStatuses.includes(entry.status)) {
             invalidEntries.push({ file: pageFile, reason: `상태가 '${entry.status}'임 (inspire 모드는 linked/waived/needed 필요)` })
+            continue
+        }
+        // linked 상태면 읽기 실패(lastReadOk: false) 체크 — inspire도 probe 실패는 불허
+        if (entry.status === 'linked' && entry.lastReadOk === false) {
+            invalidEntries.push({ 
+                file: pageFile, 
+                reason: `linked이지만 lastReadOk: false (읽기 실패). inspire도 probe 실패 시 UI 작성 불가. 다른 참조 제공 또는 waive 필요. 에러: ${entry.readError || '없음'}` 
+            })
         }
         continue
     }

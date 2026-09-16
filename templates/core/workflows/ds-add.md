@@ -32,9 +32,10 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
      3. **기타 URL** (Notion, Drive, 일반 웹) → 믿을 수 있는 match 불가 알림, Figma 노드 URL 또는 내보낸 스크린샷 요청
    
    - **읽기 성공** → `ref` (또는 `figma`) 기록 + `status: 'linked'` + `lastReadAt` + `lastReadOk: true`
-   - **읽기 실패**:
-     * `inspire` 모드: 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 waive 허용), 실패 기록 (`lastReadOk: false`, `readError`)
-     * `implement` 모드: **STOP**. UI 코드 작성하지 않음. 다른 링크/스크린샷 제공 또는 명시적 waive 필요.
+   - **읽기 실패** (inspire/implement 동일):
+     * **STOP**. UI 코드 작성하지 않음.
+     * 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 명시적 waive 선택).
+     * 실패 기록: `status: 'needed'` (또는 `'waived'`) + `lastReadAt` + `lastReadOk: false` + `readError`
    
    **d) 올바른 노드 필요**:
    - `implement` 모드에서 정확한 구현을 위해 **올바른 화면/컴포넌트 노드**가 필요하다.
