@@ -150,8 +150,8 @@
 - [x] templates/core/AGENTS.md: Write-time enforcement 섹션 추가
 - [x] test/scaffold.test.ts: pre-write-gate 생성 테스트 추가
 - [x] test/scaffold.test.ts: cursor-hooks.json / claude-settings.json preToolUse 훅 테스트
-- [ ] npm run check 통과 (typecheck → build → test)
-- [ ] PR 생성 (main 대상)
+- [x] npm run check 통과 (typecheck → build → test) — 64/64 tests passed
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/14
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
