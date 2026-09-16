@@ -5,6 +5,13 @@
             {
                 "command": "./.harness/gates/pre-commit-gate.sh cursor"
             }
+        ],
+        "preToolUse": [
+            {
+                "command": "./.harness/gates/pre-write-gate.sh cursor",
+                "matcher": "Write|StrReplace",
+                "failClosed": true
+            }
         ]
     }
 }

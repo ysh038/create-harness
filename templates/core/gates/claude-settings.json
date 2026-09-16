@@ -10,6 +10,17 @@
                         "timeout": 600
                     }
                 ]
+            },
+            {
+                "matcher": "Write|StrReplace",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "\"$CLAUDE_PROJECT_DIR\"/.harness/gates/pre-write-gate.sh claude",
+                        "timeout": 600,
+                        "failClosed": true
+                    }
+                ]
             }
         ]
     }

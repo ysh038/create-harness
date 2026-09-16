@@ -1416,3 +1416,71 @@ readError?: string         // 실패 시 짧은 에러 메시지
 - design-ref-check.mjs 강화 확인
 - PR 생성 (main 대상)
 
+## 31. v0.5.4 — Write-time enforcement: pre-write-gate로 커밋 전 UI 파일 쓰기 차단
+
+### 배경 (create-harness-demo-v12 dogfood 실패)
+
+커밋 게이트만으로는 불충분함이 확인됨:
+- 에이전트가 `src/pages/LoginPage.tsx` + design-system atoms/molecules/organisms 작성
+- Storybook `pending` 상태, `.storybook/` 없음, `design-references.json` 빈 항목
+- **커밋을 안 해서** storybook-check와 design-ref-check가 전혀 실행되지 않음
+- 결과: 정책 위반 코드가 그대로 남음
+
+**근본 원인**: 커밋 게이트는 `git commit` 시점에만 걸림. 에이전트가 파일을 쓴 후 커밋하지 않으면 체크가 아예 실행되지 않음.
+
+### 해결: preToolUse 훅으로 파일 쓰기 시점 차단
+
+**새 게이트**: `templates/core/gates/pre-write-gate.mjs`
+- Cursor `preToolUse` / Claude `PreToolUse` 훅으로 실행
+- Write/StrReplace 도구 사용 시 트리거
+- UI 파일 경로 패턴 매칭:
+  * 페이지: `src/pages/`, `src/routes/`, `src/**/*Page.tsx`
+  * 디자인시스템: `src/design-system/{atoms,molecules,organisms}/**/*.tsx`
+  * 제외: stories, tokens, `_story-template`
+- 체크 두 가지:
+
+**1. Storybook 체크**:
+- config.storybook이 `pending` 또는 `ready`인데
+- `.storybook/` 폴더가 없으면 → **deny**
+- agent_message: "/ds-init을 먼저 실행하거나 storybook을 off로 변경"
+
+**2. Design ref 체크** (페이지 파일만):
+- mode가 `inspire` 또는 `implement`
+- design-references.json에 해당 페이지 항목 없음 → **deny**
+- agent_message: "먼저 사용자에게 물어보세요: 이 화면에 참고할 피그마/URL/캡처 있어요?"
+- inspire: linked (성공) / waived / needed 허용, linked는 lastReadOk 체크
+- implement: linked (성공) / waived만 허용, needed는 deny
+
+**허용 조건**:
+- `.harness/` 파일은 항상 허용 (무한 루프 방지)
+- non-UI 파일은 허용
+- 읽기 도구는 허용
+
+### 구현 상세
+
+**파일 추가**:
+- `templates/core/gates/pre-write-gate.mjs` — 체크 로직
+- `templates/core/gates/pre-write-gate.sh` — bash wrapper
+- `templates/core/gates/cursor-hooks.json` — preToolUse 훅 추가 (`failClosed: true`)
+- `templates/core/gates/claude-settings.json` — PreToolUse 훅 추가
+
+**`src/registry.ts` 변경**:
+- `buildGateActions()`: design-system 모듈 있거나 mode가 free가 아니면 pre-write-gate 파일 추가
+
+**failClosed 정책**:
+- 게이트 스크립트 크래시 시 deny (조용히 허용 안 함)
+- stdin 파싱 실패 / 프로젝트 루트 없음 → allow (하네스 없는 프로젝트)
+
+### 버전
+
+`package.json` → **0.5.4** (minor — 새 기능, 정책 강화)
+
+### 완료 조건
+
+- `npm run check` 통과
+- pre-write-gate.mjs 생성 확인
+- cursor-hooks.json / claude-settings.json preToolUse 추가 확인
+- 테스트: UI 파일 쓰기 시 Storybook 없으면 deny
+- 테스트: 페이지 쓰기 시 design-references.json 항목 없으면 deny
+- PR 생성 (main 대상)
+
