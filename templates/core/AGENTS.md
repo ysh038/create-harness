@@ -141,7 +141,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 
 **Storybook 상태별 처리**:
 - `off`: `/ds-init` 실행 전 사용자에게 확인 — 동의 시에만 설치 진행
-- `pending`: 첫 UI 작업 시 `/ds-init` 실행 가능 (확인 권장, 필수 아님)
+- `pending`: `.storybook/` 없고 새 UI 작업 시 **반드시 먼저** `/ds-init` 실행 (커밋 게이트가 체크)
 - `ready`: 이미 설치됨, 추가 확인 불필요
 {{/if}}
 

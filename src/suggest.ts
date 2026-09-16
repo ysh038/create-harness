@@ -28,20 +28,20 @@ const suggestDesignSystem = (detected: IDetectResult): IModuleSuggestion => {
         return {
             module: 'design-system',
             isRecommended: false,
-            reason: 'Tailwind 감지 — 토큰 강제가 불가능합니다 (하네스는 CSS Modules + 토큰을 권장)',
+            reason: 'tailwind-detected',
         }
     }
     if (detected.hasCssInJs) {
         return {
             module: 'design-system',
             isRecommended: false,
-            reason: 'CSS-in-JS 감지 — 색상값이 TS 안에 있어 stylelint가 검사하지 못합니다',
+            reason: 'css-in-js-detected',
         }
     }
     return {
         module: 'design-system',
         isRecommended: true,
-        reason: 'CSS / CSS Modules 프로젝트로 판단',
+        reason: 'css-modules-detected',
     }
 }
 
@@ -53,20 +53,20 @@ const suggestAuthHttp = (detected: IDetectResult): IModuleSuggestion => {
         return {
             module: 'auth-http',
             isRecommended: false,
-            reason: `${missing.join('·')} 없음 — 참조 구현이 컴파일되지 않습니다`,
+            reason: `missing-${missing.join('-')}`,
         }
     }
     if (!detected.isVite) {
         return {
             module: 'auth-http',
             isRecommended: false,
-            reason: 'Vite 아님 — 참조 구현이 import.meta.env.VITE_* 를 씁니다',
+            reason: 'not-vite',
         }
     }
     return {
         module: 'auth-http',
         isRecommended: true,
-        reason: 'axios + react-router + Vite 감지',
+        reason: 'auth-http-detected',
     }
 }
 
@@ -78,20 +78,24 @@ const suggestDataFetching = (detected: IDetectResult): IModuleSuggestion => {
         return {
             module: 'data-fetching',
             isRecommended: false,
-            reason: `${missing.join('·')} 없음 — 참조 구현이 컴파일되지 않습니다`,
+            reason: missing.includes('zustand') && missing.includes('@tanstack/react-query')
+                ? 'missing-query-zustand'
+                : missing.includes('zustand')
+                  ? 'missing-zustand'
+                  : 'missing-query',
         }
     }
     if (!detected.hasAxios) {
         return {
             module: 'data-fetching',
             isRecommended: false,
-            reason: 'axios 없음 — queries 샘플이 axiosInstance 를 씁니다',
+            reason: 'missing-axios-datafetch',
         }
     }
     return {
         module: 'data-fetching',
         isRecommended: true,
-        reason: 'TanStack Query + Zustand 감지',
+        reason: 'data-fetching-detected',
     }
 }
 
@@ -100,19 +104,19 @@ const suggestLint = (detected: IDetectResult): IModuleSuggestion => {
         return {
             module: 'lint',
             isRecommended: false,
-            reason: 'ESLint flat config(eslint.config.*) 없음 — 규칙 조각을 spread할 대상이 없습니다',
+            reason: 'no-flat-config',
         }
     }
     if (!detected.isTypeScript) {
         return {
             module: 'lint',
             isRecommended: false,
-            reason: 'TypeScript 아님 — 명명 규칙이 타입 정보를 요구합니다',
+            reason: 'not-typescript',
         }
     }
     return {
         module: 'lint',
         isRecommended: true,
-        reason: 'ESLint flat config + TypeScript 감지',
+        reason: 'lint-detected',
     }
 }

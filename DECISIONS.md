@@ -1178,6 +1178,103 @@ Dogfooding 실패: implement 모드에서 에이전트가 "이 화면에 참고�
 
 ---
 
+## 31. v0.5.3 — Storybook pending 상태에서 UI 작업 전 `/ds-init` 강제 + 영어 설문 한글 누락 수정
+
+### A. Storybook 조기 게이트 (Bug A)
+
+**문제**: `pending` 상태를 "실행 가능 (확인 권장, 필수 아님)"으로 문서화해서 에이전트가 `/ds-init` 없이
+페이지/컴포넌트를 만들어버렸다. soft rule만으로는 불충분함.
+
+**해결**:
+1. **문서 변경** (`templates/core/AGENTS.md`):
+   - `pending`: "`.storybook/` 없고 새 UI 작업 시 **반드시 먼저** `/ds-init` 실행 (커밋 게이트가 체크)"
+   - "확인 권장, 필수 아님" 삭제
+
+2. **Hard gate 추가** (`templates/core/gates/storybook-check.mjs`):
+   - 조건: design-system 모듈 활성 + storybook이 `pending` 또는 `ready`
+   - `.storybook/` 없으면서 새 UI 페이지 파일 OR 새 `src/design-system/**/*.tsx` 컴포넌트 staged → 실패
+   - `ready`인데 `.storybook/` 없으면 → 설정 불일치로 실패
+   - 페이지 패턴: `src/pages/`, `src/routes/`, `src/app/**/page.tsx`, `src/**/*Page.tsx`
+   - 디자인시스템 컴포넌트: `src/design-system/**/*.{tsx,jsx}` (스토리 파일 제외)
+
+3. **등록** (`src/registry.ts`):
+   - `buildChecks()`: design-system + storybook !== 'off' 일 때 추가
+   - `buildGateActions()`: 같은 조건일 때 storybook-check.mjs 생성
+
+**범위**:
+- `off` 상태는 게이트 없음 (사용자가 Storybook을 명시적으로 거부한 경우)
+- Optional 강화 (언급된 "new component without story" 규칙): 이미 `/ds-add`의 스토리 필수 규칙으로 커버됨, 이 게이트는 "ds-init 전 UI 작업" 차단에만 집중
+
+### B. 영어 설문 한글 누락 (Bug B)
+
+**문제**: `--lang en` 선택 후에도 일부 프롬프트와 모듈 힌트가 한글로 표시됨.
+
+**발견된 누락**:
+1. `src/prompts.ts`: 대부분 이미 localized, 하지만 확인 필요
+2. `src/suggest.ts`: **`reason` 필드가 하드코딩 한글** — 모듈 multiselect의 `hint`로 표시됨
+
+**해결**:
+1. **suggest.ts `reason` 필드 영어 버전 추가**:
+   - 두 가지 접근 가능:
+     A. `suggestModules(detected, lang)` 로 변경해 언어별 reason 반환
+     B. 또는 reason을 i18n 키로 바꾸고 prompts.ts에서 치환
+   - 선택: **B안 (간단)** — reason 문자열을 `i18n.ts`의 함수로 이동, prompts.ts에서 hint 생성 시 치환
+
+2. **i18n.ts 확장**:
+   - `moduleReason*` 함수 추가 (각 모듈별, isRecommended에 따라 다른 메시지)
+
+3. **prompts.ts 수정**:
+   - 모듈 multiselect options 생성 시 `suggestion.reason` 대신 `msg.getModuleReason(module, suggestion)` 사용
+
+**테스트**:
+- `--lang en` 으로 실행 → 모든 프롬프트와 힌트가 영어
+- `--lang ko` → 모든 프롬프트와 힌트가 한글
+
+**작은 개선**: clack cancel 메시지, outro 같은 중간 출력은 이미 i18n 완료, 추가 작업 불필요.
+
+### 결정의 이유
+
+**왜 storybook-check를 별도 게이트로?**
+- design-ref-check는 디자인 참조 맵 검증 (inspire/implement 전용)
+- storybook-check는 Storybook 온디맨드 설치 시점 강제 (design-system + pending/ready)
+- 목적이 다르므로 분리
+
+**왜 `off` 상태는 게이트 없음?**
+- `off`는 사용자의 명시적 거부 — Storybook 없이 진행하겠다는 선택
+- `pending`은 "설치할 계획이지만 아직 안 함" — 설치 전 UI 작업은 막아야 함
+
+**왜 suggest.ts reason을 i18n으로?**
+- reason은 프롬프트 hint로 사용자에게 보이는 텍스트
+- 하드코딩 한글은 `--lang en` 의도를 무시함
+- i18n 일관성: 모든 사용자 facing 텍스트는 언어별 메시지 맵에서
+
+### 변경 파일
+
+- `package.json`: 0.5.2 → **0.5.3**
+- `templates/core/gates/storybook-check.mjs` (신규)
+- `templates/core/AGENTS.md`: "Storybook 상태별 처리" pending 표현 변경
+- `src/registry.ts`: buildGateActions + buildChecks에 storybook-check 등록
+- `src/suggest.ts`: reason 필드를 키 또는 중립 형태로 변경
+- `src/i18n.ts`: moduleReason* 함수 추가
+- `src/prompts.ts`: 모듈 hint에서 localized reason 사용
+- `DECISIONS.md`: #31 기록
+- 테스트: storybook-check 포함 여부, 영어 reason 표시 확인
+
+### 버전
+
+`package.json` → **0.5.3** (patch — bug fix, gate 추가, i18n 수정)
+
+### 완료 조건
+
+- `npm run check` 통과
+- design-system + pending: storybook-check.mjs 생성 및 checks 포함
+- design-system + off: storybook-check 미포함
+- `--lang en` → 모든 힌트가 영어
+- PR 생성 (main 대상)
+
+
+---
+
 ## 30. v0.5.2 — 디자인 참조 정책: 성공적으로 읽은 후에만 linked, 읽기 실패 시 implement 중단
 
 ### 배경

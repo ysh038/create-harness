@@ -12,6 +12,7 @@ import { writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
 import { patchEslintIgnores } from './eslintPatch.js'
 import { buildPonytailAction } from './ponytail.js'
+import { getModuleReason } from './i18n.js'
 import {
     buildPlan,
     hasAtomicBaseline,
@@ -402,14 +403,20 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
             !options.modules.includes(suggestion.module),
     )
     if (explicitModules === undefined && excluded.length > 0) {
-        console.log(`\n${pc.dim('감지 결과로 제외된 모듈:')}`)
+        // Use localized reason messages
+        const infoText = options.lang === 'en' ? 'Excluded modules based on detection:' : '감지 결과로 제외된 모듈:'
+        console.log(`\n${pc.dim(infoText)}`)
         for (const suggestion of excluded) {
+            const reasonText = options.lang ? getModuleReason(options.lang, suggestion.reason) : suggestion.reason
             console.log(
-                `  ${pc.dim('-')} ${suggestion.module} — ${pc.dim(suggestion.reason)}`,
+                `  ${pc.dim('-')} ${suggestion.module} — ${pc.dim(reasonText)}`,
             )
         }
+        const includeText = options.lang === 'en' 
+            ? `To include: --modules ${VALID_MODULES.join(',')}`
+            : `포함하려면: --modules ${VALID_MODULES.join(',')}`
         console.log(
-            pc.dim(`  포함하려면: --modules ${VALID_MODULES.join(',')}`),
+            pc.dim(`  ${includeText}`),
         )
     }
 

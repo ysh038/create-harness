@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts'
 
-import { getMessages, type TLanguage } from './i18n.js'
+import { getMessages, getModuleReason, type TLanguage } from './i18n.js'
 import type {
     IDetectResult,
     IModuleSuggestion,
@@ -173,11 +173,12 @@ export const runPrompts = async (
         options: MODULE_ORDER.map((module) => {
             const suggestion = suggestionByModule.get(module)
             const mark = suggestion?.isRecommended ? '' : ` ${msg.moduleNotRecommended}`
+            const reasonText = suggestion?.reason ? getModuleReason(lang, suggestion.reason) : ''
             return {
                 value: module,
                 label: `${module}${mark}`,
-                hint: suggestion
-                    ? `${MODULE_LABELS[module]} — ${suggestion.reason}`
+                hint: reasonText
+                    ? `${MODULE_LABELS[module]} — ${reasonText}`
                     : MODULE_LABELS[module],
             }
         }),
