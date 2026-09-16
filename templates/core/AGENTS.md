@@ -20,6 +20,13 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
   커밋 게이트(`.harness/gates/pre-commit-gate.sh`)가 실패 시 커밋을 거부한다.
 - 검증 목록은 `.harness/config.json` 의 `checks` 배열이다. 체크를 추가/제거하려면 이 파일을 수정한다.
 - 테스트를 통과시키기 위해 단정문(assertion)을 약화시키지 않는다. 실패하면 코드를 고친다.
+{{#if DESIGN_SYSTEM}}- **Write-time enforcement**: UI 파일(페이지, design-system 컴포넌트) 작성 시점에 다음을 차단한다:
+  * Storybook `pending`/`ready` 상태인데 `.storybook/` 없으면 → `/ds-init` 먼저 실행
+  * 커밋하지 않아도 **파일 쓰기 시점에** 차단되므로 정책 위반 코드가 남지 않는다.
+{{/if}}{{#if HAS_DESIGN_REFS}}- **Design ref enforcement**: inspire/implement 모드에서 페이지/화면 작성 시 design-references.json 항목 필요.
+  * 항목 없으면 파일 쓰기가 차단되고, 먼저 디자인 참조를 물어보라는 메시지가 표시된다.
+  * 읽기 실패한 참조(lastReadOk: false)로는 UI 작성 불가 — 다른 참조 제공 또는 명시적 waive 필요.
+{{/if}}
 
 ## 디자인 모드 및 코딩 스타일
 

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Write/StrReplace/Edit 도구 사용 시점 게이트 진입점
+set -euo pipefail
+
+GATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "$GATE_DIR/pre-write-gate.mjs" "${1:-cursor}"

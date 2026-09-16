@@ -323,7 +323,7 @@ const buildGateActions = (
         })
     }
 
-    // design-system 모듈 선택 시 storybook 상태가 off가 아니면 storybook-check.mjs 추가
+    // design-system 모듈 선택 시 storybook 상태가 off가 아니면 storybook-check.mjs 추가 (0.5.3)
     if (options.modules.includes('design-system') && options.storybook !== 'off') {
         actions.push({
             dest: '.harness/gates/storybook-check.mjs',
@@ -331,6 +331,24 @@ const buildGateActions = (
             module: 'core',
             executable: true,
         })
+    }
+
+    // design-system 모듈이 있으면 pre-write-gate 추가 (Storybook 체크) (0.5.4)
+    // 또는 inspire/implement 모드면 추가 (design ref 체크)
+    if (options.modules.includes('design-system') || options.mode !== 'free') {
+        actions.push(
+            {
+                dest: '.harness/gates/pre-write-gate.sh',
+                content: loadTemplate('core/gates/pre-write-gate.sh', vars),
+                module: 'core',
+                executable: true,
+            },
+            {
+                dest: '.harness/gates/pre-write-gate.mjs',
+                content: loadTemplate('core/gates/pre-write-gate.mjs', vars),
+                module: 'core',
+            },
+        )
     }
 
     if (options.agents.includes('cursor')) {

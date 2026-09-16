@@ -138,6 +138,22 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/12
 - [ ] npm publish (PR 병합 후)
 
+## v0.5.4
+
+- [x] templates/core/gates/pre-write-gate.mjs 생성 (Write/StrReplace 시점 체크)
+- [x] templates/core/gates/pre-write-gate.sh 생성 (bash wrapper)
+- [x] templates/core/gates/cursor-hooks.json: preToolUse 훅 추가
+- [x] templates/core/gates/claude-settings.json: PreToolUse 훅 추가 (Write|StrReplace)
+- [x] src/registry.ts: buildGateActions에 pre-write-gate 파일 추가
+- [x] package.json: 버전 0.5.4
+- [x] DECISIONS.md: #31 기록 (v12 dogfood 실패 분석)
+- [x] templates/core/AGENTS.md: Write-time enforcement 섹션 추가
+- [x] test/scaffold.test.ts: pre-write-gate 생성 테스트 추가
+- [x] test/scaffold.test.ts: cursor-hooks.json / claude-settings.json preToolUse 훅 테스트
+- [ ] npm run check 통과 (typecheck → build → test)
+- [ ] PR 생성 (main 대상)
+- [ ] npm publish (PR 병합 후)
+
 ## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

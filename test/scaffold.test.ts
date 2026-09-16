@@ -395,6 +395,62 @@ describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () =
         ).toBe(false)
     })
 
+    it('pre-write-gate.mjs를 design-system 또는 inspire/implement 모드에서 생성한다', () => {
+        // design-system 모듈 있음 (Storybook 체크 필요)
+        const designSystemPlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+            modules: ['design-system', 'lint'],
+        })
+        expect(
+            designSystemPlan.some(
+                (action) => action.dest === '.harness/gates/pre-write-gate.mjs',
+            ),
+        ).toBe(true)
+        expect(
+            designSystemPlan.some(
+                (action) => action.dest === '.harness/gates/pre-write-gate.sh',
+            ),
+        ).toBe(true)
+
+        // inspire 모드 (design ref 체크 필요)
+        const inspirePlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'inspire',
+            modules: ['lint'],
+        })
+        expect(
+            inspirePlan.some(
+                (action) => action.dest === '.harness/gates/pre-write-gate.mjs',
+            ),
+        ).toBe(true)
+
+        // implement 모드 (design ref 체크 필요)
+        const implementPlan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+            modules: ['lint'],
+        })
+        expect(
+            implementPlan.some(
+                (action) => action.dest === '.harness/gates/pre-write-gate.mjs',
+            ),
+        ).toBe(true)
+    })
+
+    it('free 모드에서 design-system 모듈 없으면 pre-write-gate를 생성하지 않는다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+            modules: ['auth-http', 'lint'],
+        })
+        expect(
+            plan.some(
+                (action) => action.dest === '.harness/gates/pre-write-gate.mjs',
+            ),
+        ).toBe(false)
+    })
+
     it('inspire/implement에서 config.json checks에 design-ref가 포함된다', () => {
         const implementPlan = buildPlan(fakeDetect(), {
             ...fullOptions('/tmp/fake'),
@@ -417,6 +473,49 @@ describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () =
         )!
         const parsed = JSON.parse(config.content)
         expect(parsed.checks.map((c: ICheck) => c.id)).not.toContain('design-ref')
+    })
+
+    it('cursor-hooks.json에 preToolUse 훅이 포함된다 (design-system 또는 inspire/implement)', () => {
+        const planWithDs = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+            modules: ['design-system', 'lint'],
+        })
+        const hooksDs = planWithDs.find(
+            (action) => action.dest === '.cursor/hooks.json',
+        )!
+        const parsedDs = JSON.parse(hooksDs.content)
+        expect(parsedDs.hooks.preToolUse).toBeDefined()
+        expect(parsedDs.hooks.preToolUse[0].matcher).toContain('Write')
+        expect(parsedDs.hooks.preToolUse[0].failClosed).toBe(true)
+
+        const planImplement = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+            modules: ['lint'],
+        })
+        const hooksImpl = planImplement.find(
+            (action) => action.dest === '.cursor/hooks.json',
+        )!
+        const parsedImpl = JSON.parse(hooksImpl.content)
+        expect(parsedImpl.hooks.preToolUse).toBeDefined()
+    })
+
+    it('claude-settings.json에 Write|StrReplace PreToolUse 훅이 포함된다', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'implement',
+        })
+        const settings = plan.find(
+            (action) => action.dest === '.claude/settings.json',
+        )!
+        const parsed = JSON.parse(settings.content)
+        const writeHook = parsed.hooks.PreToolUse.find(
+            (hook: any) => hook.matcher && hook.matcher.includes('Write'),
+        )
+        expect(writeHook).toBeDefined()
+        expect(writeHook.hooks[0].command).toContain('pre-write-gate.sh')
+        expect(writeHook.hooks[0].failClosed).toBe(true)
     })
 })
 
