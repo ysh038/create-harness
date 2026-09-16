@@ -10,19 +10,37 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
 ## 절차
 
 {{#if HAS_DESIGN_REFS}}
-0. **디자인 참조 확인 (페이지/화면 작업 시작 전 필수)**:
-   - `.harness/design-references.json` 을 읽어 현재 작업 화면의 디자인 링크가 있는지 확인한다.
-   - **사용자 메시지에 이미 Figma URL이 포함되어 있으면**:
-     * 그 URL을 design-references.json 에 저장하고, 아래 질문은 건너뛴다
-   - **URL이 없고, 해당 화면 항목이 design-references.json 에 없으면**:
-     * 반드시 사용자에게 물어본다: **"이 화면에 참고할 피그마/URL 있어요? (있음 / 없음 / 나중에)"**
-     * 있음 → URL을 받아 `status: linked` 로 기록
-     * 없음 → `status: waived` 로 기록
-     * 나중에 → `status: needed` 로 기록
-   - **implement 모드에서는 이 질문에 대한 답변을 받기 전에 페이지/화면 UI 코드를 작성하지 않는다**
-   - **inspire 모드에서는 같은 타이밍에 묻지만, waived 응답도 허용**
-   - 기존 항목(linked/waived/needed 중 하나)이 있으면 재질문하지 않는다
-   - `implement` 모드에서 링크가 있으면: 해당 Figma 노드를 사용자 MCP를 통해 읽는다 (가능한 경우)
+0. **디자인 참조 확인 및 읽기 (페이지/화면 작업 시작 전 필수)**:
+
+   **a) 기존 항목 체크**:
+   - `.harness/design-references.json` 읽어 현재 화면의 항목 확인
+   - 이미 있으면 (`linked`/`waived`/`needed`) → 재질문 안 함, 기존 상태 사용
+   
+   **b) 참조 수집** (항목 없을 때):
+   - **사용자 메시지에 이미 URL/이미지 포함** → 그대로 사용, 질문 건너뜀
+   - **없으면** → **반드시 물어봄**: 「이 화면에 참고할 피그마/URL/캡처 있어요? (있음 / 없음 / 나중에)」
+     * **있음** → URL 또는 이미지 파일 받음
+     * **없음** → `status: waived` 기록, 진행 OK
+     * **나중에** → `status: needed` 기록
+       - `inspire` 모드: 진행 OK
+       - `implement` 모드: `needed` 만으로는 UI 작업 불가 — 지금 제공하거나 waive 필요
+   
+   **c) 참조 읽기 시도** (URL/이미지 받았을 때):
+   - **참조 종류 판단**:
+     1. **Figma** (`figma.com`, `figjam` URL) → 사용자 Figma MCP로 design context 및/또는 screenshot 시도
+     2. **이미지** (png/jpg/webp/gif URL 또는 첨부) → fetch/open해 에이전트가 볼 수 있는지 확인
+     3. **기타 URL** (Notion, Drive, 일반 웹) → 믿을 수 있는 match 불가 알림, Figma 노드 URL 또는 내보낸 스크린샷 요청
+   
+   - **읽기 성공** → `ref` (또는 `figma`) 기록 + `status: 'linked'` + `lastReadAt` + `lastReadOk: true`
+   - **읽기 실패** (inspire/implement 동일):
+     * **STOP**. UI 코드 작성하지 않음.
+     * 다른 Figma 노드 URL 또는 스크린샷 요청 (또는 명시적 waive 선택).
+     * 실패 기록: `status: 'needed'` (또는 `'waived'`) + `lastReadAt` + `lastReadOk: false` + `readError`
+   
+   **d) 올바른 노드 필요**:
+   - `implement` 모드에서 정확한 구현을 위해 **올바른 화면/컴포넌트 노드**가 필요하다.
+   - 잘못된 노드(상위 페이지, 다른 variant)를 링크하면 구현이 어긋난다.
+   - 이미 잘못 링크했으면 `status: 'waived'` 로 변경하거나 올바른 URL로 재링크.
 
 {{/if}}
 1. **화면 분해**: 만들 화면을 계층으로 쪼개 목록을 먼저 적는다.

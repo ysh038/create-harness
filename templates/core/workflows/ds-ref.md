@@ -31,30 +31,41 @@ description: Register design sources and manage the design reference map for Fig
    ```
 3. 파일 저장
 
-### B. 컴포넌트 링크 등록
+### B. 컴포넌트 링크 등록 및 읽기 probe
 
 사용자가 "Button 컴포넌트에 Figma 링크를 붙이고 싶다"고 할 때:
 
 1. 코드 경로를 물어본다 (예: `src/design-system/atoms/Button/Button.tsx`)
-2. Figma URL을 물어본다 (전체 URL 또는 노드 ID만)
+2. 디자인 참조 URL 또는 이미지를 물어본다
+3. **즉시 읽기 시도** (ds-add.md의 "c) 참조 읽기 시도"와 동일):
+   - **Figma URL** → 사용자 MCP로 design context/screenshot
+   - **이미지** → fetch/open 확인
+   - **기타 URL** → 지원 불가 알림, Figma 노드 또는 스크린샷 요청
+4. **읽기 결과에 따라 기록**:
+   - **성공** → `ref` (또는 `figma`) + `status: 'linked'` + `lastReadAt` + `lastReadOk: true`
+   - **실패** → `status: 'needed'` (또는 `'waived'` 사용자 선택 시) + `lastReadAt` + `lastReadOk: false` + `readError`
    
-   **올바른 화면 노드 필요**: `implement` 모드에서 정확한 구현을 위해서는 **올바른 화면/컴포넌트 노드**가
-   필요하다. 잘못된 노드(상위 페이지, 다른 variant)를 링크하면 구현이 어긋난다.
-   이미 잘못 링크한 경우 `status: 'waived'` 로 변경하거나 올바른 URL로 다시 링크한다.
-3. `entries` 배열에 항목 추가 또는 업데이트:
+   예시 (성공):
    ```json
    {
      "id": "atom-button",
      "kind": "atom",
      "codePath": "src/design-system/atoms/Button/Button.tsx",
-     "figma": {
+     "ref": {
+       "kind": "figma",
        "url": "https://www.figma.com/file/abc123?node-id=456",
        "nodeId": "456",
        "label": "Primary Button"
      },
-     "status": "linked"
+     "status": "linked",
+     "lastReadAt": "2026-09-16T02:49:00Z",
+     "lastReadOk": true
    }
    ```
+   
+   **올바른 노드 필요**: `implement` 모드에서 정확한 구현을 위해 **올바른 화면/컴포넌트 노드**가
+   필요하다. 잘못된 노드(상위 페이지, 다른 variant)를 링크하면 구현이 어긋난다.
+   이미 잘못 링크한 경우 `status: 'waived'` 로 변경하거나 올바른 URL로 재링크한다.
 
 ### C. 페이지 URL에서 일괄 시드 (선택)
 
@@ -80,12 +91,21 @@ description: Register design sources and manage the design reference map for Fig
 
 - `id`는 유니크해야 함 (중복 시 기존 항목 업데이트)
 - `kind`: atom, molecule, organism, layout, page, flow, token 중 하나
+- `ref.kind`: 
+  - `figma` — Figma/FigJam URL, MCP로 읽기 가능
+  - `image` — 이미지 파일 (png/jpg/webp/gif), fetch/open 가능
+  - `unsupported` — 기타 URL (Notion, Drive 등), 믿을 수 있는 match 불가
 - `status`: 
-  - `linked` — Figma 링크 있고 코드 존재
-  - `needed` — 링크는 있지만 코드 아직 없음 (작업 예정)
+  - `linked` — **성공적으로 읽은** 참조 있음 (`lastReadOk: true`). `implement` 모드 UI 작업 허용.
+  - `needed` — 링크는 있지만 아직 읽지 않았거나 읽기 실패 (작업 예정). `inspire`는 허용, `implement`는 불가.
   - `inspire-only` — 영감용 (정확히 따르지 않음)
-  - `waived` — 링크 없이 진행하기로 함
+  - `waived` — 참조 없이 진행하기로 명시적 선택. `inspire`/`implement` 모두 허용.
   - `broken` — 링크가 깨짐 (파일 삭제·권한 변경 등)
+- `lastReadOk`: 
+  - `true` — 마지막 읽기 성공, `linked` 상태와 함께
+  - `false` — 마지막 읽기 실패, `readError` 참조
+  - `undefined` — 아직 읽기 시도 안 함
+- **성공 후에만** `status: 'linked'` + `lastReadOk: true`. 실패한 시도는 fake `linked`로 남기지 않음.
 
 ## 출력
 
