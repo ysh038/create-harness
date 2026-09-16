@@ -47,6 +47,24 @@ export const MESSAGES = {
         moduleDataFetching: 'TanStack Query + 샘플 API 계층 + Zustand 알림 저장소 — 서버 상태 패턴',
         moduleLint: 'ESLint/prettier/commitlint 네이밍·import 경계 게이트',
         
+        // Module reasons
+        reasonTailwindDetected: 'Tailwind 감지 — 토큰 강제가 불가능합니다 (하네스는 CSS Modules + 토큰을 권장)',
+        reasonCssInJsDetected: 'CSS-in-JS 감지 — 색상값이 TS 안에 있어 stylelint가 검사하지 못합니다',
+        reasonCssModulesDetected: 'CSS / CSS Modules 프로젝트로 판단',
+        reasonMissingAxiosReactRouter: 'axios·react-router 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonMissingAxios: 'axios 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonMissingReactRouter: 'react-router 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonNotVite: 'Vite 아님 — 참조 구현이 import.meta.env.VITE_* 를 씁니다',
+        reasonAuthHttpDetected: 'axios + react-router + Vite 감지',
+        reasonMissingQueryZustand: '@tanstack/react-query·zustand 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonMissingQuery: '@tanstack/react-query 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonMissingZustand: 'zustand 없음 — 참조 구현이 컴파일되지 않습니다',
+        reasonMissingAxiosDatafetch: 'axios 없음 — queries 샘플이 axiosInstance 를 씁니다',
+        reasonDataFetchingDetected: 'TanStack Query + Zustand 감지',
+        reasonNoFlatConfig: 'ESLint flat config(eslint.config.*) 없음 — 규칙 조각을 spread할 대상이 없습니다',
+        reasonNotTypeScript: 'TypeScript 아님 — 명명 규칙이 타입 정보를 요구합니다',
+        reasonLintDetected: 'ESLint flat config + TypeScript 감지',
+        
         // Storybook
         storybookInfo: 'Storybook — 컴포넌트를 전체 앱과 분리하여 미리보는 갤러리입니다. UI 컴포넌트를 단독으로 확인하고 디자이너와 협업할 때 유용합니다. 지금 설치하지 않고 의향만 기록하면, /ds-init 워크플로가 나중에 설치합니다.',
         storybookPrompt: 'Storybook을 사용할 계획인가요?',
@@ -100,6 +118,24 @@ export const MESSAGES = {
         moduleDataFetching: 'TanStack Query + sample API layers + Zustand alert store — server state patterns',
         moduleLint: 'ESLint/prettier/commitlint naming & import boundary gates',
         
+        // Module reasons
+        reasonTailwindDetected: 'Tailwind detected — token enforcement not possible (harness recommends CSS Modules + tokens)',
+        reasonCssInJsDetected: 'CSS-in-JS detected — color values in TS cannot be checked by stylelint',
+        reasonCssModulesDetected: 'Detected CSS / CSS Modules project',
+        reasonMissingAxiosReactRouter: 'Missing axios·react-router — reference implementation will not compile',
+        reasonMissingAxios: 'Missing axios — reference implementation will not compile',
+        reasonMissingReactRouter: 'Missing react-router — reference implementation will not compile',
+        reasonNotVite: 'Not Vite — reference implementation uses import.meta.env.VITE_*',
+        reasonAuthHttpDetected: 'Detected axios + react-router + Vite',
+        reasonMissingQueryZustand: 'Missing @tanstack/react-query·zustand — reference implementation will not compile',
+        reasonMissingQuery: 'Missing @tanstack/react-query — reference implementation will not compile',
+        reasonMissingZustand: 'Missing zustand — reference implementation will not compile',
+        reasonMissingAxiosDatafetch: 'Missing axios — queries sample uses axiosInstance',
+        reasonDataFetchingDetected: 'Detected TanStack Query + Zustand',
+        reasonNoFlatConfig: 'No ESLint flat config (eslint.config.*) — nowhere to spread rule fragments',
+        reasonNotTypeScript: 'Not TypeScript — naming rules require type information',
+        reasonLintDetected: 'Detected ESLint flat config + TypeScript',
+        
         // Storybook
         storybookInfo: 'Storybook — A separate gallery where you preview UI components alone (not the full app). Useful to check the design system and collaborate with designers. Choosing yes records intent (pending); actual install can happen later via /ds-init.',
         storybookPrompt: 'Do you plan to use Storybook?',
@@ -110,3 +146,31 @@ export const MESSAGES = {
 }
 
 export const getMessages = (lang: TLanguage) => MESSAGES[lang]
+
+// Helper function to get localized module reason
+export const getModuleReason = (lang: TLanguage, reasonKey: string): string => {
+    const msg = MESSAGES[lang]
+    
+    // Map reason keys to message keys
+    const reasonMap: Record<string, keyof typeof msg> = {
+        'tailwind-detected': 'reasonTailwindDetected',
+        'css-in-js-detected': 'reasonCssInJsDetected',
+        'css-modules-detected': 'reasonCssModulesDetected',
+        'missing-axios-react-router': 'reasonMissingAxiosReactRouter',
+        'missing-axios': 'reasonMissingAxios',
+        'missing-react-router': 'reasonMissingReactRouter',
+        'not-vite': 'reasonNotVite',
+        'auth-http-detected': 'reasonAuthHttpDetected',
+        'missing-query-zustand': 'reasonMissingQueryZustand',
+        'missing-query': 'reasonMissingQuery',
+        'missing-zustand': 'reasonMissingZustand',
+        'missing-axios-datafetch': 'reasonMissingAxiosDatafetch',
+        'data-fetching-detected': 'reasonDataFetchingDetected',
+        'no-flat-config': 'reasonNoFlatConfig',
+        'not-typescript': 'reasonNotTypeScript',
+        'lint-detected': 'reasonLintDetected',
+    }
+    
+    const msgKey = reasonMap[reasonKey]
+    return msgKey ? (msg[msgKey] as string) : reasonKey
+}

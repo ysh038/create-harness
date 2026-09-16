@@ -102,6 +102,14 @@ export const buildChecks = (
         })
     }
 
+    // design-system 모듈 선택 시 storybook 상태가 pending/ready면 storybook-check 추가
+    if (options.modules.includes('design-system') && options.storybook !== 'off') {
+        checks.push({
+            id: 'storybook',
+            command: 'node .harness/gates/storybook-check.mjs',
+        })
+    }
+
     if (detected.scripts['typecheck']) {
         checks.push({ id: 'typecheck', command: `${run} typecheck` })
     } else if (detected.isTypeScript) {
@@ -310,6 +318,16 @@ const buildGateActions = (
         actions.push({
             dest: '.harness/gates/design-ref-check.mjs',
             content: loadTemplate('core/gates/design-ref-check.mjs', vars),
+            module: 'core',
+            executable: true,
+        })
+    }
+
+    // design-system 모듈 선택 시 storybook 상태가 off가 아니면 storybook-check.mjs 추가
+    if (options.modules.includes('design-system') && options.storybook !== 'off') {
+        actions.push({
+            dest: '.harness/gates/storybook-check.mjs',
+            content: loadTemplate('core/gates/storybook-check.mjs', vars),
             module: 'core',
             executable: true,
         })

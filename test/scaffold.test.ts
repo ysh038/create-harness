@@ -196,6 +196,7 @@ describe('buildChecks', () => {
     it('대상 scripts에 실제 존재하는 체크만, 빠른 실패 순서로 담는다', () => {
         const checks = buildChecks(fakeDetect(), fullOptions('/tmp/fake'))
         expect(checks.map((check) => check.id)).toEqual([
+            'storybook', // design-system + storybook !== 'off'
             'typecheck',
             'lint',
             'stylelint',
@@ -203,7 +204,7 @@ describe('buildChecks', () => {
             'build',
         ])
         // typecheck 스크립트가 없으면 tsc 직접 실행으로 폴백
-        expect(checks[0].command).toBe('npx tsc --noEmit')
+        expect(checks[1].command).toBe('npx tsc --noEmit')
         // vitest watch 기본값이면 --run 을 붙인다
         expect(checks.find((check) => check.id === 'test')!.command).toBe(
             'npm run test -- --run',
@@ -274,13 +275,13 @@ describe('suggestModules — 감지 기반 기본 선택값', () => {
     it('Tailwind 프로젝트는 design-system 을 기본에서 뺀다', () => {
         const detected = fakeDetect({ hasTailwind: true })
         expect(recommendedModules(detected)).not.toContain('design-system')
-        expect(reasonOf(detected, 'design-system').reason).toContain('Tailwind')
+        expect(reasonOf(detected, 'design-system').reason).toBe('tailwind-detected')
     })
 
     it('CSS-in-JS 프로젝트도 design-system 을 기본에서 뺀다', () => {
-        expect(
-            recommendedModules(fakeDetect({ hasCssInJs: true })),
-        ).not.toContain('design-system')
+        const detected = fakeDetect({ hasCssInJs: true })
+        expect(recommendedModules(detected)).not.toContain('design-system')
+        expect(reasonOf(detected, 'design-system').reason).toBe('css-in-js-detected')
     })
 
     it('axios 가 없으면 auth-http·data-fetching 둘 다 뺀다', () => {
@@ -294,7 +295,7 @@ describe('suggestModules — 감지 기반 기본 선택값', () => {
     it('Vite 가 아니면 auth-http 를 뺀다 (import.meta.env 전제)', () => {
         const detected = fakeDetect({ isVite: false })
         expect(recommendedModules(detected)).not.toContain('auth-http')
-        expect(reasonOf(detected, 'auth-http').reason).toContain('Vite')
+        expect(reasonOf(detected, 'auth-http').reason).toBe('not-vite')
     })
 
     it('TanStack Query 가 없으면 data-fetching 을 뺀다', () => {
@@ -305,7 +306,7 @@ describe('suggestModules — 감지 기반 기본 선택값', () => {
     it('flat config 가 없으면 lint 를 뺀다', () => {
         const detected = fakeDetect({ hasEslintFlatConfig: false })
         expect(recommendedModules(detected)).not.toContain('lint')
-        expect(reasonOf(detected, 'lint').reason).toContain('flat config')
+        expect(reasonOf(detected, 'lint').reason).toBe('no-flat-config')
     })
 
     it('비추천이어도 모든 모듈에 판단 근거가 붙는다', () => {
