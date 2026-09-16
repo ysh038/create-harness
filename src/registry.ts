@@ -94,6 +94,14 @@ export const buildChecks = (
     const exec = PM_EXEC[detected.packageManager]
     const checks: ICheck[] = []
 
+    // inspire/implement 모드에서는 design-ref-check를 맨 앞에 추가
+    if (options.mode !== 'free') {
+        checks.push({
+            id: 'design-ref',
+            command: 'node .harness/gates/design-ref-check.mjs',
+        })
+    }
+
     if (detected.scripts['typecheck']) {
         checks.push({ id: 'typecheck', command: `${run} typecheck` })
     } else if (detected.isTypeScript) {
@@ -296,6 +304,16 @@ const buildGateActions = (
             module: 'core',
         },
     ]
+
+    // inspire/implement 모드에서는 design-ref-check.mjs 추가
+    if (options.mode !== 'free') {
+        actions.push({
+            dest: '.harness/gates/design-ref-check.mjs',
+            content: loadTemplate('core/gates/design-ref-check.mjs', vars),
+            module: 'core',
+            executable: true,
+        })
+    }
 
     if (options.agents.includes('cursor')) {
         actions.push({

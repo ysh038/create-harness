@@ -76,6 +76,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{#if DESIGN_SYSTEM}}| CSS 색상 원시값 (`#hex`, `rgb()`) | 디자인 토큰만 사용. stylelint가 error 처리 |
 | 페이지 파일에 일회성 마크업·스타일 | Atomic 계층부터 만들고 페이지는 조립만 (`{{RULES_DIR}}/30-design-system`) |
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
+{{/if}}{{#if HAS_DESIGN_REFS}}| **inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성** | **반드시 먼저** design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
 ## 설치·설정 질문이 비어 있을 때
@@ -95,8 +96,13 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
    - Non-TTY 환경에서 필수 답변 누락 시 즉시 에러 (stdin 프롬프트로 걸리지 않음)
 3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
 {{#if DESIGN_SYSTEM}}4. **디자인 화면 작업**은 `/ds-add` (컴포넌트 추가) 워크플로에서 처리
-   - **implement 모드**: 새 화면/컴포넌트 시작 시 참고 URL을 물어본다
-     "이 화면에 참고할 피그마/URL 있어요?" (있음/없음/나중에)
+   - **새 화면/페이지 작업을 시작할 때 (매 채팅 메시지가 아닌 화면 단위로 1회)**:
+     * 사용자 메시지에 디자인 URL이 **이미 포함되어 있으면** → 그대로 사용, design-references.json 에 저장
+     * URL이 없고 해당 화면이 design-references.json 에 **없으면** → 반드시 물어본다:
+       "이 화면에 참고할 피그마/URL 있어요? (있음 / 없음 / 나중에)"
+     * 기존 항목(linked/waived/needed)이 있으면 재질문하지 않는다
+   - **implement 모드**: 답변을 받기 **전에는 절대 페이지/화면 UI 코드를 작성하지 않는다**
+   - **inspire 모드**: 같은 타이밍에 묻지만, 'waived'(없음) 응답도 허용
    - 사용자가 요청 메시지에 이미 URL을 포함했으면 저장하고, 다시 묻지 않는다
 {{/if}}{{#if HAS_DESIGN_REFS}}   - `/ds-ref` (디자인 링크 맵 관리) — 나중에 URL 추가 또는 소스 등록
 {{/if}}

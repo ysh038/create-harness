@@ -1051,3 +1051,128 @@ export const MESSAGES = {
 - 한국어/영어 모두 테스트
 - PR 생성
 
+
+
+---
+
+## 29. v0.5.1 — inspire/implement 모드에서 디자인 참조 ask를 강제한다
+
+### 문제
+
+Dogfooding 실패: implement 모드에서 에이전트가 "이 화면에 참고할 피그마/URL 있어요?" 질문을 건너뛰고
+바로 로그인 UI를 만들어버렸다. `AGENTS.md`와 `ds-add.md`의 soft markdown 규칙만으로는 불충분함이 확인되었다.
+
+### 원인
+
+1. **순서 모호성**: 현재 `ds-add.md`는 "컴포넌트를 만든 **후** Figma 링크를 물어본다"고 되어 있음.
+   에이전트가 이를 "코드 먼저, 질문은 나중에"로 해석함.
+2. **Soft 가이드 한계**: "물어볼 수 있다" 같은 표현은 선택사항으로 읽힘.
+3. **강제 장치 부재**: 커밋 게이트에 디자인 참조 누락을 잡는 체크가 없음.
+
+### 해결
+
+#### A. 순서 명확화 (Soft Rule Fix)
+
+1. **AGENTS.md**:
+   - 절대 금지 섹션에 추가:
+     ```
+     | inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성 |
+     | 반드시 먼저 design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |
+     ```
+   - "디자인 화면 작업" 섹션 강화:
+     * 물어보는 타이밍: 새 화면/페이지 작업 시작 시 (매 채팅 메시지가 아닌 화면 단위로 1회)
+     * implement: 답변 받기 **전에는 절대** 페이지/화면 UI 코드 작성 금지
+     * inspire: 같은 타이밍에 묻지만 waived 응답 허용
+
+2. **ds-add.md**:
+   - "0. 디자인 참조 확인" 단계를 **컴포넌트 작성 전으로 이동** (step 0 → before step 1)
+   - "컴포넌트를 만든 후 Figma 링크를 물어본다" 블록 **제거**
+   - 명확한 순서:
+     1. 사용자 메시지에 URL이 이미 있으면 → 저장, 질문 건너뜀
+     2. URL 없고 design-references.json 에 항목 없으면 → **반드시 물어봄**
+     3. implement: 답변 받기 전 UI 코드 작성 금지
+     4. inspire: waived 응답 허용
+
+#### B. Hard Enforcement (새 Gate)
+
+**`templates/core/gates/design-ref-check.mjs`** 생성:
+
+- **언제 실행**: 커밋 게이트에서 (run-checks.mjs를 통해)
+- **조건**:
+  - mode가 `inspire` 또는 `implement`
+  - `.harness/design-references.json` 파일 존재 필수 (없으면 fail)
+- **검증 대상**: `git diff --cached --name-only --diff-filter=A` (staged 신규 파일)
+- **페이지 패턴 감지**:
+  ```
+  src/pages/**/*.{tsx,jsx}
+  src/routes/**/*.{tsx,jsx}
+  src/app/**/page.{tsx,jsx}
+  src/**/*Page.{tsx,jsx}
+  ```
+- **Pass 조건**: 각 새 페이지 파일이 design-references.json의 `entries[]`에 존재
+  (status는 `linked` / `waived` / `needed` 중 아무거나)
+- **Fail 시**: 누락된 파일 목록 + 해결 방법 출력 (예시 JSON 포함)
+
+**`src/registry.ts` 통합**:
+
+- `buildGateActions()`: mode가 free가 아니면 design-ref-check.mjs 추가
+- `buildChecks()`: mode가 free가 아니면 checks 배열 맨 앞에 추가:
+  ```js
+  { id: "design-ref", command: "node .harness/gates/design-ref-check.mjs" }
+  ```
+- 맨 앞에 두는 이유: typecheck보다 빠르게 실패시켜 불필요한 빌드 방지
+
+#### C. 테스트
+
+1. **단위 테스트**:
+   - `buildChecks()`: mode가 implement일 때 design-ref check 포함 확인
+   - `buildChecks()`: mode가 free일 때 design-ref check 미포함 확인
+   - `buildGateActions()`: design-ref-check.mjs 생성 여부 확인
+
+2. **통합 테스트** (수동):
+   - inspire/implement 프로젝트에서 새 페이지 추가 → design-references.json 항목 없음 → 커밋 실패
+   - waived/needed/linked 항목 추가 후 → 커밋 통과
+   - free 모드 → check 자체가 실행되지 않음
+
+### False Positive 최소화
+
+- 컴포넌트 파일(atoms/molecules/organisms)은 대상에서 제외
+- 페이지/라우트 파일만 패턴 매칭
+- 기존 파일 수정(`--diff-filter=A` 없음)은 체크 안 함
+- Git 없는 환경/초기 커밋 전에는 체크 건너뜀
+
+### Ask Frequency (Not Every Message)
+
+- 화면/페이지 단위로 1회만 묻는다 (매 메시지마다 X)
+- 같은 화면의 컴포넌트 추가 시 재질문 안 함
+- 재질문 조건:
+  * design-references.json에 항목 없음 **AND**
+  * 사용자 메시지에 URL 없음
+
+### 변경 파일
+
+- `package.json`: 0.5.0 → **0.5.1**
+- `templates/core/gates/design-ref-check.mjs` (신규)
+- `templates/core/AGENTS.md`: 절대 금지 + 디자인 화면 작업 섹션
+- `templates/core/workflows/ds-add.md`: step 0 이동, "만든 후 물어보기" 제거
+- `src/registry.ts`: buildGateActions + buildChecks
+- `test/scaffold.test.ts`: 새 체크 테스트 추가
+- `DECISIONS.md`: #29 기록
+- `TODO.md`: v0.5.1 완료 체크
+
+### 범위 밖
+
+- npm publish (PR 병합 후 수동)
+- 컴포넌트 단위 링크 물어보기 제거 (페이지만 강제, 컴포넌트는 선택)
+
+### 버전
+
+`package.json` → **0.5.1** (patch — bug fix, 정책 강화)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- inspire/implement 프로젝트에서 design-ref-check 실행 확인
+- free 모드에서 check 미실행 확인
+- PR 생성 (main 대상)
+
