@@ -36,11 +36,33 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{#if HAS_DESIGN_REFS}}
 ### 디자인 참조 맵
 
-`.harness/design-references.json` — 에이전트가 관리하는 Figma 링크 레지스트리.
-- `implement` 모드에서는 링크된 디자인에서 벗어나지 않는다
-- `/ds-add` 실행 시 컴포넌트별 Figma 링크를 물어볼 수 있다 (있음/없음/나중에)
-- Figma 접근은 사용자 MCP 설정으로 제공 (CLI가 API 키를 다루지 않음)
-- 링크를 붙일 땐 Figma URL만 붙여넣으면 됨 (JSON 편집 불필요)
+`.harness/design-references.json` — 에이전트가 관리하는 디자인 참조 레지스트리.
+
+**세 가지 모드별 정책**:
+
+1. **`inspire` 모드** — 화면/페이지마다:
+   - 읽을 수 있는 참조가 이미 있으면 → 영감으로 활용 (재해석 허용)
+   - 없으면 → 물어봄: 「이 화면에 참고할 피그마/URL/캡처 있어요? (있음 / 없음 / 나중에)」
+     * **없음** → `waived` 기록, 진행 OK
+     * **나중에** → `needed` 기록, 진행 OK
+     * **있음** → URL/이미지 받아 **즉시 읽기 시도**
+   - 읽기 실패 시 → **다른 링크/스크린샷 요청**, 진행 중단하지 않음 (inspire)
+
+2. **`implement` 모드** — 화면/페이지마다:
+   - 같은 타이밍에 물어봄 (inspire와 동일 질문)
+   - `needed` 만으로는 UI 작업 시작 불가 — 지금 제공하거나 `waived` 선택 필요
+   - 읽기 실패 시 → **STOP**. UI 작성하지 않음. 다른 Figma 노드 URL 또는 스크린샷 요청.
+   - 성공적으로 읽은 참조(`linked`, `lastReadOk: true`) 또는 명시적 `waived`만 UI 작업 허용
+
+**"성공적으로 읽음" 정의** — 참조 종류별 라우팅:
+1. **Figma** (`figma.com`, `figjam` URL): 사용자 Figma MCP로 design context 및/또는 스크린샷 획득. 성공 = 사용 가능한 컨텍스트/이미지 받음.
+2. **이미지** (png/jpg/webp/gif URL 또는 첨부): fetch/open해 에이전트가 볼 수 있는지 확인. 성공 = 이미지 로드됨.
+3. **기타 URL** (Notion, Drive, 일반 웹): 믿을 수 있는 match를 보장하지 못함. 사용자에게 지원 불가 알리고 Figma 노드 URL 또는 내보낸 스크린샷 요청. 읽기 실패로 간주.
+
+**성공 후에만** `status: 'linked'` + `lastReadOk: true` 기록. 실패한 시도는 fake `linked` 상태로 남기지 않음.
+
+**질문 빈도**: 화면/페이지 단위로 1회 (매 메시지마다 X). 맵에 기존 항목(`linked`/`waived`/`needed`)이 있으면 재질문 안 함.
+**Figma 접근**: 사용자 MCP 설정으로 제공 (CLI는 API 키를 다루지 않음).
 {{/if}}
 
 ### 코딩 스타일 준수
@@ -77,6 +99,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | 페이지 파일에 일회성 마크업·스타일 | Atomic 계층부터 만들고 페이지는 조립만 (`{{RULES_DIR}}/30-design-system`) |
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
 {{/if}}{{#if HAS_DESIGN_REFS}}| **inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성** | **반드시 먼저** design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |
+| **implement 모드: 읽기 실패한 참조로 UI 작성** | 사용자가 제공한 참조를 읽을 수 없으면 **STOP**. 다른 Figma 노드 URL 또는 스크린샷 요청. `linked` 는 성공적으로 읽은 후에만 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
 ## 설치·설정 질문이 비어 있을 때
@@ -97,13 +120,22 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 3. `.harness/config.json`에 이미 해당 필드가 있으면 재질문하지 않는다
 {{#if DESIGN_SYSTEM}}4. **디자인 화면 작업**은 `/ds-add` (컴포넌트 추가) 워크플로에서 처리
    - **새 화면/페이지 작업을 시작할 때 (매 채팅 메시지가 아닌 화면 단위로 1회)**:
-     * 사용자 메시지에 디자인 URL이 **이미 포함되어 있으면** → 그대로 사용, design-references.json 에 저장
-     * URL이 없고 해당 화면이 design-references.json 에 **없으면** → 반드시 물어본다:
-       "이 화면에 참고할 피그마/URL 있어요? (있음 / 없음 / 나중에)"
-     * 기존 항목(linked/waived/needed)이 있으면 재질문하지 않는다
-   - **implement 모드**: 답변을 받기 **전에는 절대 페이지/화면 UI 코드를 작성하지 않는다**
-   - **inspire 모드**: 같은 타이밍에 묻지만, 'waived'(없음) 응답도 허용
-   - 사용자가 요청 메시지에 이미 URL을 포함했으면 저장하고, 다시 묻지 않는다
+     * design-references.json에 해당 화면 항목이 **이미 있으면** (`linked`/`waived`/`needed`) → 재질문 안 함
+     * 사용자 메시지에 URL/이미지가 **포함되어 있으면** → **즉시 읽기 시도** → 성공 시 `linked` 저장, 실패 시 아래 정책 적용
+     * 둘 다 없으면 → **반드시 물어봄**: 「이 화면에 참고할 피그마/URL/캡처 있어요? (있음 / 없음 / 나중에)」
+   - **답변에 따른 처리**:
+     * **있음** → URL/이미지 받아 **즉시 읽기 시도**
+       - **읽기 성공** → `linked` + `lastReadOk: true` 기록, UI 작업 진행 OK
+       - **읽기 실패** (inspire) → 다른 Figma 노드 URL 또는 스크린샷 요청, waive 허용
+       - **읽기 실패** (implement) → **STOP**. UI 작성하지 않음. 다른 링크/스크린샷 요청 또는 waive
+     * **없음** → `waived` 기록, 진행 OK (inspire/implement 모두 허용)
+     * **나중에** → `needed` 기록
+       - inspire: 진행 OK
+       - implement: `needed` 만으로는 UI 작업 불가 — 지금 제공하거나 waive 필요
+   - **읽기 방법** (참조 종류별):
+     1. Figma: 사용자 MCP로 design context/screenshot
+     2. 이미지: fetch/open 확인
+     3. 기타 URL: 지원 불가, Figma 노드 또는 스크린샷 요청
 {{/if}}{{#if HAS_DESIGN_REFS}}   - `/ds-ref` (디자인 링크 맵 관리) — 나중에 URL 추가 또는 소스 등록
 {{/if}}
 {{#if DESIGN_SYSTEM}}

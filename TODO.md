@@ -125,6 +125,19 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/11
 - [ ] npm publish (PR 병합 후)
 
+## v0.5.2
+
+- [x] src/types.ts: IDesignEntry 확장 (ref.kind, lastReadAt, lastReadOk, readError)
+- [x] templates/core/AGENTS.md: 디자인 참조 맵 섹션 + 절대 금지 + 디자인 화면 작업 섹션 업데이트
+- [x] templates/core/workflows/ds-add.md: "0. 디자인 참조 확인 및 읽기" 절차 상세화
+- [x] templates/core/workflows/ds-ref.md: "B. 컴포넌트 링크 등록 및 읽기 probe" + 규칙 업데이트
+- [x] templates/core/gates/design-ref-check.mjs: inspire/implement 모드별 검증 강화
+- [x] package.json: 버전 0.5.2
+- [x] DECISIONS.md: #30 기록
+- [ ] npm run check 통과 (typecheck → build → test)
+- [ ] PR 생성 (main 대상)
+- [ ] npm publish (PR 병합 후)
+
 ## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

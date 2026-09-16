@@ -1176,3 +1176,145 @@ Dogfooding 실패: implement 모드에서 에이전트가 "이 화면에 참고�
 - free 모드에서 check 미실행 확인
 - PR 생성 (main 대상)
 
+---
+
+## 30. v0.5.2 — 디자인 참조 정책: 성공적으로 읽은 후에만 linked, 읽기 실패 시 implement 중단
+
+### 배경
+
+v0.5.1이 "디자인 참조를 묻는다"는 질문 타이밍을 강제했지만, **읽기 실패 처리**와 **성공 정의**가 명확하지 않아
+에이전트가 다음과 같이 행동할 수 있었다:
+
+1. 사용자가 Figma URL 제공 → 읽기 실패 → 그냥 `linked`로 기록하고 UI 작성 시작
+2. 읽을 수 없는 URL (Notion, Drive) → 지원 불가를 알리지 않고 `linked` 표시
+3. `implement` 모드에서 읽기 실패 후에도 UI 작성 진행 (정책 위반)
+
+근본 문제: **읽기 성공 여부를 추적하는 필드가 없었다.** `status: 'linked'`가 "링크가 있다"는 뜻인지
+"성공적으로 읽었다"는 뜻인지 모호했다.
+
+### 해결 방안
+
+#### A. 스키마 확장 (`IDesignEntry`)
+
+```typescript
+ref?: {
+  kind: 'figma' | 'image' | 'unsupported'
+  url: string
+  nodeId?: string
+  label?: string
+}
+lastReadAt?: string        // ISO-8601, 마지막 읽기 시도 시각
+lastReadOk?: boolean       // 마지막 읽기 성공 여부
+readError?: string         // 실패 시 짧은 에러 메시지
+```
+
+- `ref.kind`: 참조 종류 라우팅 (Figma MCP vs image fetch vs unsupported)
+- `lastReadOk`: 읽기 성공 여부의 정본 — `true`여야만 `implement` UI 작업 허용
+- 하위 호환: 기존 `figma` 필드는 유지 (`ref` 없을 때 fallback)
+
+#### B. 세 가지 모드별 정책 명확화
+
+**`free` 모드**: 디자인 참조 맵 비활성, 체크 없음.
+
+**`inspire` 모드** (화면/페이지마다):
+1. 기존 항목(`linked`/`waived`/`needed`)이 있으면 → 재질문 안 함
+2. 없으면 → 물어봄: 「이 화면에 참고할 피그마/URL/캡처 있어요? (있음 / 없음 / 나중에)」
+   - **있음** → URL/이미지 받아 **즉시 읽기 시도**
+     * 성공 → `linked` + `lastReadOk: true` 기록, 진행
+     * 실패 → 다른 Figma 노드 URL 또는 스크린샷 요청, `waived` 허용
+   - **없음** → `waived` 기록, 진행 OK
+   - **나중에** → `needed` 기록, 진행 OK (inspire는 needed 허용)
+
+**`implement` 모드** (화면/페이지마다):
+1. 기존 항목 있으면 재질문 안 함 (단, 상태 검증은 커밋 게이트가 함)
+2. 없으면 같은 질문
+   - **있음** → 즉시 읽기 시도
+     * 성공 → `linked` + `lastReadOk: true`, 진행
+     * 실패 → **STOP**. UI 코드 작성하지 않음. 다른 링크/스크린샷 또는 명시적 `waived` 필요
+   - **없음** → `waived` 기록, 진행 OK
+   - **나중에** → `needed` 기록, **UI 작업 불가** — 지금 제공하거나 `waived` 필요
+
+#### C. "성공적으로 읽음" 정의 — 참조 종류별 라우팅
+
+1. **Figma** (`figma.com`, `figjam` URL):
+   - 사용자 Figma MCP로 design context 및/또는 screenshot 획득 시도
+   - 성공 = 사용 가능한 컨텍스트 또는 이미지 받음
+   - 실패 = MCP 없음, 권한 없음, 노드 ID 잘못됨 등
+
+2. **이미지** (png/jpg/webp/gif URL 또는 첨부):
+   - fetch/open해 에이전트가 볼 수 있는지 확인
+   - 성공 = 이미지 로드됨
+   - 실패 = 404, 권한 없음, 손상된 파일 등
+
+3. **기타 URL** (Notion, Drive, 일반 웹):
+   - 믿을 수 있는 match를 보장하지 못함
+   - 사용자에게 지원 불가 알리고 Figma 노드 URL 또는 내보낸 스크린샷 요청
+   - 읽기 실패로 간주 (`ref.kind: 'unsupported'`)
+
+#### D. Hard Enforcement 강화 (`design-ref-check.mjs`)
+
+**inspire 모드**:
+- 새 페이지는 `linked` / `waived` / `needed` 중 하나 필요
+- `linked` 상태면 `lastReadOk` 체크 안 함 (inspire는 읽기 실패도 진행 허용)
+
+**implement 모드**:
+- 새 페이지는 다음 중 하나 필요:
+  * `status: 'waived'` (명시적 선택) 또는
+  * `status: 'linked'` + `lastReadOk !== false`
+- `needed` 만으로는 **실패** — 메시지: "참조를 지금 제공하거나 명시적 waive 필요"
+- `linked`이지만 `lastReadOk === false` → **실패** — 메시지: "읽기 실패. 다른 참조 제공 또는 waive. 에러: {readError}"
+
+#### E. 문서 업데이트
+
+1. **`AGENTS.md`**:
+   - 디자인 참조 맵 섹션: 세 가지 모드별 정책 + "성공적으로 읽음" 정의 + 참조 종류별 라우팅
+   - 절대 금지 섹션: "implement 모드: 읽기 실패한 참조로 UI 작성" 추가
+   - 디자인 화면 작업 섹션: 읽기 시도 명시, 실패 시 처리 분기
+
+2. **`ds-add.md`**:
+   - "0. 디자인 참조 확인" → "0. 디자인 참조 확인 및 읽기"
+   - 읽기 시도 절차 상세화 (a/b/c/d 섹션), 참조 종류별 라우팅, 성공/실패 처리
+
+3. **`ds-ref.md`**:
+   - "B. 컴포넌트 링크 등록" → "B. 컴포넌트 링크 등록 및 읽기 probe"
+   - 즉시 읽기 시도 명시, `lastReadAt`/`lastReadOk`/`readError` 예시
+   - 규칙 섹션: `ref.kind` 정의, `lastReadOk` 설명, "성공 후에만 linked" 강조
+
+### 범위 밖
+
+- 자동 Figma MCP 호출 구현 (에이전트가 수행, CLI는 정책만 명시)
+- 픽셀 단위 diff 검증 (`strict` fidelity — UI만 준비됨)
+- npm publish (PR 병합 후 수동)
+
+### 변경 파일
+
+- `package.json`: 0.5.1 → **0.5.2**
+- `src/types.ts`: `IDesignEntry` 확장 (`ref.kind`, `lastReadAt`, `lastReadOk`, `readError`)
+- `templates/core/AGENTS.md`: 디자인 참조 맵 섹션 + 절대 금지 + 디자인 화면 작업 섹션
+- `templates/core/workflows/ds-add.md`: "0. 디자인 참조 확인 및 읽기" 절차 상세화
+- `templates/core/workflows/ds-ref.md`: "B. 컴포넌트 링크 등록 및 읽기 probe" + 규칙 업데이트
+- `templates/core/gates/design-ref-check.mjs`: inspire/implement 모드별 검증 강화
+- `DECISIONS.md`: #30 기록
+- `TODO.md`: v0.5.2 체크리스트
+
+### 테스트
+
+- 타입 컴파일: `IDesignEntry` 확장된 필드
+- 스냅샷 재생성: 템플릿 변경 반영
+- 통합 테스트 (수동):
+  * implement 프로젝트: `needed` 상태 페이지 커밋 → 실패
+  * implement 프로젝트: `linked` + `lastReadOk: false` 페이지 커밋 → 실패
+  * implement 프로젝트: `waived` 페이지 커밋 → 통과
+  * inspire 프로젝트: `needed` 상태 페이지 커밋 → 통과
+
+### 버전
+
+`package.json` → **0.5.2** (patch — 정책 명확화, 스키마 확장 하위 호환)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- 템플릿 문서 3개 업데이트 확인 (AGENTS.md, ds-add.md, ds-ref.md)
+- design-ref-check.mjs 강화 확인
+- PR 생성 (main 대상)
+

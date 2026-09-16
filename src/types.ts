@@ -157,12 +157,26 @@ export interface IDesignEntry {
     id: string
     kind: TComponentKind
     codePath: string
+    /** 디자인 참조 - Figma, 이미지, 또는 지원되지 않는 URL */
+    ref?: {
+        kind: 'figma' | 'image' | 'unsupported'
+        url: string
+        nodeId?: string
+        label?: string
+    }
+    /** 하위 호환성을 위해 유지 (ref가 없을 때 fallback) */
     figma?: {
         url: string
         nodeId?: string
         label?: string
     }
     status: TReferenceStatus
+    /** 마지막 읽기 시도 시각 (ISO-8601) */
+    lastReadAt?: string
+    /** 마지막 읽기 성공 여부 */
+    lastReadOk?: boolean
+    /** 읽기 실패 시 에러 메시지 (짧게) */
+    readError?: string
     notes?: string
 }
 
