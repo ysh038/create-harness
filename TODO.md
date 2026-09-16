@@ -122,7 +122,7 @@
 - [x] package.json 버전 0.5.1
 - [x] test/scaffold.test.ts: design-ref-check 테스트 추가
 - [x] npm run check 통과
-- [ ] PR 생성 (main 대상)
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/11
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
