@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -942,5 +942,190 @@ describe('cursor-hooks.json', () => {
 
         expect(Array.isArray(preToolUse)).toBe(true)
         expect(preToolUse[0].matcher).toBe('Write|StrReplace|Edit|ApplyPatch')
+    })
+})
+
+describe('storybook-check.mjs — Stories pairing enforcement', () => {
+    let tmp: string
+
+    afterEach(() => {
+        if (tmp) rmSync(tmp, { recursive: true, force: true })
+    })
+
+    it('ready + .storybook 존재 + 새 Button.tsx (stories 없음) → exit 1', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-storybook-test-'))
+        
+        // .harness/config.json 생성 (storybook: ready)
+        const harnessDir = path.join(tmp, '.harness')
+        mkdirSync(harnessDir, { recursive: true })
+        writeFileSync(
+            path.join(harnessDir, 'config.json'),
+            JSON.stringify({ storybook: 'ready' })
+        )
+        
+        // .storybook/ 디렉터리 생성
+        mkdirSync(path.join(tmp, '.storybook'))
+        
+        // src/design-system/atoms/Button/ 디렉터리 생성
+        const buttonDir = path.join(tmp, 'src/design-system/atoms/Button')
+        mkdirSync(buttonDir, { recursive: true })
+        
+        // Button.tsx 파일 생성
+        writeFileSync(path.join(buttonDir, 'Button.tsx'), 'export const Button = () => null')
+        
+        // git init + stage
+        execSync('git init', { cwd: tmp, stdio: 'ignore' })
+        execSync('git add .', { cwd: tmp, stdio: 'ignore' })
+        
+        // storybook-check.mjs 복사
+        const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+        const storybookCheckAction = plan.find((a) => a.dest === '.harness/gates/storybook-check.mjs')!
+        const gatesDir = path.join(harnessDir, 'gates')
+        mkdirSync(gatesDir, { recursive: true })
+        writeFileSync(path.join(gatesDir, 'storybook-check.mjs'), storybookCheckAction.content)
+        
+        // storybook-check 실행 (exit 1 예상)
+        let exitCode = 0
+        try {
+            execSync(`node ${path.join(harnessDir, 'gates/storybook-check.mjs')}`, {
+                cwd: tmp,
+                stdio: 'pipe',
+            })
+        } catch (err: any) {
+            exitCode = err.status
+        }
+        
+        expect(exitCode).toBe(1)
+    })
+
+    it('ready + .storybook 존재 + Button.tsx + Button.stories.tsx → exit 0', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-storybook-test-'))
+        
+        // .harness/config.json 생성
+        const harnessDir = path.join(tmp, '.harness')
+        mkdirSync(harnessDir, { recursive: true })
+        writeFileSync(
+            path.join(harnessDir, 'config.json'),
+            JSON.stringify({ storybook: 'ready' })
+        )
+        
+        // .storybook/ 디렉터리 생성
+        mkdirSync(path.join(tmp, '.storybook'))
+        
+        // Button.tsx + Button.stories.tsx 생성
+        const buttonDir = path.join(tmp, 'src/design-system/atoms/Button')
+        mkdirSync(buttonDir, { recursive: true })
+        writeFileSync(path.join(buttonDir, 'Button.tsx'), 'export const Button = () => null')
+        writeFileSync(path.join(buttonDir, 'Button.stories.tsx'), 'export default { title: "Button" }')
+        
+        // git init + stage
+        execSync('git init', { cwd: tmp, stdio: 'ignore' })
+        execSync('git add .', { cwd: tmp, stdio: 'ignore' })
+        
+        // storybook-check.mjs 복사
+        const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+        const storybookCheckAction = plan.find((a) => a.dest === '.harness/gates/storybook-check.mjs')!
+        const gatesDir = path.join(harnessDir, 'gates')
+        mkdirSync(gatesDir, { recursive: true })
+        writeFileSync(path.join(gatesDir, 'storybook-check.mjs'), storybookCheckAction.content)
+        
+        // storybook-check 실행 (exit 0 예상)
+        let exitCode = 0
+        try {
+            execSync(`node ${path.join(harnessDir, 'gates/storybook-check.mjs')}`, {
+                cwd: tmp,
+                stdio: 'pipe',
+            })
+        } catch (err: any) {
+            exitCode = err.status
+        }
+        
+        expect(exitCode).toBe(0)
+    })
+
+    it('pending + .storybook 없음 → stories 체크 skip', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-storybook-test-'))
+        
+        // .harness/config.json 생성 (storybook: pending)
+        const harnessDir = path.join(tmp, '.harness')
+        mkdirSync(harnessDir, { recursive: true })
+        writeFileSync(
+            path.join(harnessDir, 'config.json'),
+            JSON.stringify({ storybook: 'pending' })
+        )
+        
+        // Button.tsx만 생성 (stories 없음)
+        const buttonDir = path.join(tmp, 'src/design-system/atoms/Button')
+        mkdirSync(buttonDir, { recursive: true })
+        writeFileSync(path.join(buttonDir, 'Button.tsx'), 'export const Button = () => null')
+        
+        // git init + stage
+        execSync('git init', { cwd: tmp, stdio: 'ignore' })
+        execSync('git add .', { cwd: tmp, stdio: 'ignore' })
+        
+        // storybook-check.mjs 복사
+        const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+        const storybookCheckAction = plan.find((a) => a.dest === '.harness/gates/storybook-check.mjs')!
+        const gatesDir = path.join(harnessDir, 'gates')
+        mkdirSync(gatesDir, { recursive: true })
+        writeFileSync(path.join(gatesDir, 'storybook-check.mjs'), storybookCheckAction.content)
+        
+        // storybook-check 실행 (exit 1 예상 - pending + UI 파일 있음)
+        let exitCode = 0
+        try {
+            execSync(`node ${path.join(harnessDir, 'gates/storybook-check.mjs')}`, {
+                cwd: tmp,
+                stdio: 'pipe',
+            })
+        } catch (err: any) {
+            exitCode = err.status
+        }
+        
+        // pending 상태에서는 Storybook 미설치 차단 (Part 1)
+        expect(exitCode).toBe(1)
+    })
+
+    it('ready + ExampleButton.tsx (stories 없음) → exit 0 (Example* 제외)', () => {
+        tmp = mkdtempSync(path.join(tmpdir(), 'harness-storybook-test-'))
+        
+        // .harness/config.json 생성
+        const harnessDir = path.join(tmp, '.harness')
+        mkdirSync(harnessDir, { recursive: true })
+        writeFileSync(
+            path.join(harnessDir, 'config.json'),
+            JSON.stringify({ storybook: 'ready' })
+        )
+        
+        // .storybook/ 디렉터리 생성
+        mkdirSync(path.join(tmp, '.storybook'))
+        
+        // ExampleButton.tsx 생성 (Example* 제외 대상)
+        const buttonDir = path.join(tmp, 'src/design-system/atoms/ExampleButton')
+        mkdirSync(buttonDir, { recursive: true })
+        writeFileSync(path.join(buttonDir, 'ExampleButton.tsx'), 'export const ExampleButton = () => null')
+        
+        // git init + stage
+        execSync('git init', { cwd: tmp, stdio: 'ignore' })
+        execSync('git add .', { cwd: tmp, stdio: 'ignore' })
+        
+        // storybook-check.mjs 복사
+        const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+        const storybookCheckAction = plan.find((a) => a.dest === '.harness/gates/storybook-check.mjs')!
+        const gatesDir = path.join(harnessDir, 'gates')
+        mkdirSync(gatesDir, { recursive: true })
+        writeFileSync(path.join(gatesDir, 'storybook-check.mjs'), storybookCheckAction.content)
+        
+        // storybook-check 실행 (exit 0 예상 - Example* 제외)
+        let exitCode = 0
+        try {
+            execSync(`node ${path.join(harnessDir, 'gates/storybook-check.mjs')}`, {
+                cwd: tmp,
+                stdio: 'pipe',
+            })
+        } catch (err: any) {
+            exitCode = err.status
+        }
+        
+        expect(exitCode).toBe(0)
     })
 })
