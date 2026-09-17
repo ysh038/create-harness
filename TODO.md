@@ -184,8 +184,8 @@
 - [x] npm run check 통과 (typecheck → build → test) — 74/74 tests passed
 
 ### PR
-- [ ] 변경사항 커밋 및 푸시
-- [ ] PR 생성 (main 대상)
+- [x] 변경사항 커밋 및 푸시
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/15
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
