@@ -25,9 +25,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
     isUiFile,
+    isDesignSystemComponent,
     findProjectRoot,
     checkStorybookPrereq,
     checkDesignRefPrereq,
+    checkStoriesPair,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -182,7 +184,7 @@ for (const targetPath of targetPaths) {
         continue
     }
 
-    // UI 파일로 쓰려고 함 — Storybook + Design ref 체크
+    // UI 파일로 쓰려고 함 — Storybook + Design ref + Stories pair 체크
     const storybookCheck = checkStorybookPrereq(projectRoot, config)
     if (storybookCheck.deny) {
         respond('deny', storybookCheck.userMsg, storybookCheck.agentMsg)
@@ -191,6 +193,17 @@ for (const targetPath of targetPaths) {
     const designRefCheck = checkDesignRefPrereq(projectRoot, config, relPath)
     if (designRefCheck.deny) {
         respond('deny', designRefCheck.userMsg, designRefCheck.agentMsg)
+    }
+
+    // Stories pair 체크 (DS 컴포넌트만, shell로 새 파일 쓰는 경우)
+    if (isDesignSystemComponent(relPath)) {
+        const absPath = path.resolve(cwd, targetPath)
+        const isNewFile = !existsSync(absPath)
+        
+        const storiesCheck = checkStoriesPair(projectRoot, config, relPath, isNewFile)
+        if (storiesCheck.deny) {
+            respond('deny', storiesCheck.userMsg, storiesCheck.agentMsg)
+        }
     }
 }
 

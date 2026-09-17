@@ -127,3 +127,76 @@ Storybook 상태가 'pending' (설치 예정)인데 .storybook/ 디렉터리가 
 // 모두 통과
 console.log(`✓ storybook-check 통과 (storybook: ${storybookState}, .storybook/ 없음, 새 UI 파일 없음)`)
 process.exit(0)
+
+
+// ===== Part 2: Stories Pairing Check (Storybook ready 상태일 때만) =====
+
+// 9. ready 상태가 아니면 stories 체크 건너뜀
+if (storybookState !== 'ready') {
+    process.exit(0)
+}
+
+// 10. ready 상태: 새 DS 컴포넌트는 stories 파일 필요
+// 패턴: src/design-system/{atoms,molecules,organisms}/**/*.tsx (stories 제외)
+const DS_LAYER_PATTERN = /^src\/design-system\/(atoms|molecules|organisms)\/.*\.tsx?$/
+const EXCLUDE_PATTERNS = [
+    /\.stories\./,
+    /_story-template/,
+    /\/tokens\./,
+    /\/Example[A-Z]/,
+    /\/index\.ts/,
+]
+
+const newDsLayerComponents = stagedFiles.filter((file) => {
+    if (!DS_LAYER_PATTERN.test(file)) return false
+    if (EXCLUDE_PATTERNS.some((p) => p.test(file))) return false
+    return true
+})
+
+if (newDsLayerComponents.length === 0) {
+    // 새 DS 컴포넌트 없음 → 통과
+    process.exit(0)
+}
+
+// 11. 각 새 컴포넌트에 대해 stories 파일 존재 확인
+const missingStories = []
+
+for (const componentFile of newDsLayerComponents) {
+    const dir = path.dirname(componentFile)
+    const ext = path.extname(componentFile)
+    const base = path.basename(componentFile, ext)
+    const storiesPath = path.join(projectRoot, dir, `${base}.stories.tsx`)
+    
+    if (!existsSync(storiesPath)) {
+        missingStories.push({ componentFile, storiesPath: `${dir}/${base}.stories.tsx` })
+    }
+}
+
+// 12. Stories 누락 시 실패
+if (missingStories.length > 0) {
+    let errorMsg = `✗ storybook-check 실패 (Stories pairing)
+
+Storybook ready 상태: 새 design-system 컴포넌트는 반드시 stories 파일과 함께 커밋해야 합니다.
+
+누락된 stories 파일:\n`
+
+    for (const { componentFile, storiesPath } of missingStories) {
+        errorMsg += `\n  컴포넌트: ${componentFile}\n`
+        errorMsg += `  필요한 stories: ${storiesPath}\n`
+    }
+
+    errorMsg += `\n해결 방법:
+1. /ds-add 워크플로에서 컴포넌트와 stories를 함께 작성하세요
+2. 각 컴포넌트 옆에 <Name>.stories.tsx 파일을 추가하세요
+   (src/design-system/_story-template.tsx 참고)
+
+이 게이트는 Storybook ready 상태에서 stories 없는 컴포넌트가 누적되는 것을 방지합니다.
+`
+
+    console.error(errorMsg)
+    process.exit(1)
+}
+
+// 모든 체크 통과
+console.log(`✓ storybook-check 통과 (stories pairing OK, ${newDsLayerComponents.length}개 컴포넌트)`)
+process.exit(0)

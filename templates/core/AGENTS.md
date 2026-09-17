@@ -110,7 +110,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `/verify` | checks 순차 실행, 실패 시 수정 루프 |
 | `/ship` | 검증 → 커밋 → `docs/task-log.md` 기록 |
 {{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
-| `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + 스토리 선행 추가 |
+| `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + **스토리 선행 추가** (Storybook ready 시 필수) |
 | `/ux-review` | 인터랙션 상태·토큰 사용·시각적 완성도 리뷰 — 테스트로 못 옮기는 품질을 다룬다 |
 {{/if}}{{#if HAS_DESIGN_REFS}}| `/ds-ref` | 디자인 소스 등록 및 참조 맵 관리 |
 {{/if}}
@@ -127,6 +127,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{#if DESIGN_SYSTEM}}| CSS 색상 원시값 (`#hex`, `rgb()`) | 디자인 토큰만 사용. stylelint가 error 처리 |
 | 페이지 파일에 일회성 마크업·스타일 | Atomic 계층부터 만들고 페이지는 조립만 (`{{RULES_DIR}}/30-design-system`) |
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
+| **Storybook ready: 새 design-system 컴포넌트를 stories 없이 커밋** | **각 컴포넌트 옆에 `<Name>.stories.tsx` 필수. Write/Shell 게이트 + 커밋 게이트가 차단** |
 {{/if}}{{#if HAS_DESIGN_REFS}}| **inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성** | **반드시 먼저** design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |
 | **implement 모드: 읽기 실패한 참조로 UI 작성** | 사용자가 제공한 참조를 읽을 수 없으면 **STOP**. 다른 Figma 노드 URL 또는 스크린샷 요청. `linked` 는 성공적으로 읽은 후에만 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
