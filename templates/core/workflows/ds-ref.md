@@ -13,6 +13,10 @@ description: Register design sources and manage the design reference map for Fig
 2. **컴포넌트 링크 등록**: 이미 만든 컴포넌트에 나중에 Figma 링크 붙이기
 3. **페이지 URL에서 일괄 등록**: Figma 페이지 URL을 주면 그 안의 컴포넌트들을 `needed` 상태로 시드
 
+**페이지 참조 단위**: 복잡한 페이지를 구현할 때 **하나의 페이지 URL**로 충분하다. 섹션별로 여러 개의 
+URL을 등록할 필요는 없다 — 같은 페이지에서 다른 node-id로 특정 섹션을 재읽기할 수 있다. 
+섹션별 깊은 읽기는 선택사항이며, 시각적 충실도를 높이는 데 도움이 된다.
+
 ## 절차
 
 ### A. 디자인 소스 추가
