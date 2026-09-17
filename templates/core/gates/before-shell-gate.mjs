@@ -73,31 +73,51 @@ if (!command) {
     respond('allow')
 }
 
-// 안전 명령 패턴 — 이런 명령은 무조건 허용
-const SAFE_PATTERNS = [
+// 안전 명령 패턴 — package manager, git, 기본 shell 명령 (리다이렉트 없을 때만)
+const SAFE_COMMANDS_NO_CHECK = [
     /^npm\s+(install|ci|run|test|start|build)/,
     /^pnpm\s+(install|run|test|start|build)/,
     /^yarn\s+(install|run|test|start|build)/,
     /^bun\s+(install|run|test|start|build)/,
     /^git\s+/,
-    /^node\s+/,
-    /^npx\s+/,
-    /^pnpx\s+/,
-    /^bunx\s+/,
     /^cd\s+/,
     /^ls\s+/,
     /^mkdir\s+/,
-    /^rm\s+/,
-    /^mv\s+/,
-    /^cp\s+/,
-    /^cat\s+[^<>|&]+$/, // cat <file> (읽기만) 허용, 리다이렉트 있으면 아래에서 체크
 ]
 
-if (SAFE_PATTERNS.some((p) => p.test(command))) {
-    // git, npm 등은 리다이렉트 검사 없이 바로 허용
-    if (/^(git|npm|pnpm|yarn|bun|node|npx|pnpx|bunx|cd)\s+/.test(command)) {
-        respond('allow')
+// node/npx/bunx는 UI write 패턴이 없을 때만 허용 (writeFileSync 우회 차단)
+const UI_WRITE_KEYWORDS = [
+    'writeFileSync',
+    'outputFileSync',
+    'src/pages/',
+    'src/routes/',
+    'src/app/',
+    'Page.tsx',
+    'Page.jsx',
+    'design-system/atoms',
+    'design-system/molecules',
+    'design-system/organisms',
+    'src/components/',
+]
+
+// 안전 명령은 리다이렉트 검사 없이 바로 허용
+if (SAFE_COMMANDS_NO_CHECK.some((p) => p.test(command))) {
+    respond('allow')
+}
+
+// node/npx/pnpx/bunx는 UI write 패턴이 있으면 deny (코드 안의 writeFileSync 등은 파싱 불가)
+if (/^(node|npx|pnpx|bunx)\s+/.test(command)) {
+    const hasUiWriteKeyword = UI_WRITE_KEYWORDS.some((kw) => command.includes(kw))
+    if (hasUiWriteKeyword) {
+        // writeFileSync 등 UI write 키워드가 명령에 포함되어 있으면 deny
+        // (실제 파일 경로를 정확히 파싱할 수 없으므로 보수적으로 차단)
+        respond(
+            'deny',
+            'Shell 명령에서 UI 파일 쓰기를 감지했습니다. Write/StrReplace 도구를 사용하세요.',
+            '⚠️ node/npx 명령에 writeFileSync 또는 UI 경로 키워드가 포함되어 있어 차단되었습니다. UI 파일은 Write/StrReplace 도구를 사용하여 작성하세요.',
+        )
     }
+    respond('allow')
 }
 
 // 리다이렉트/heredoc/tee 패턴 감지

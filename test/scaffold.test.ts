@@ -864,3 +864,83 @@ describe('non-TTY 필수 답변 검증', () => {
         expect(output).toContain('done')
     })
 })
+
+describe('Tailwind 자동 와이어링', () => {
+    it('styling tailwind 선택 시 requiredDevDeps에 tailwindcss, @tailwindcss/vite 포함', () => {
+        const deps = requiredDevDeps({
+            ...fullOptions('/tmp/fake'),
+            style: {
+                componentDeclaration: 'function',
+                componentExport: 'default',
+                styling: 'tailwind',
+            },
+        })
+
+        expect(deps).toContain('tailwindcss')
+        expect(deps).toContain('@tailwindcss/vite')
+    })
+
+    it('styling css 선택 시 tailwind 패키지 미포함', () => {
+        const deps = requiredDevDeps({
+            ...fullOptions('/tmp/fake'),
+            style: {
+                componentDeclaration: 'function',
+                componentExport: 'default',
+                styling: 'css',
+            },
+        })
+
+        expect(deps).not.toContain('tailwindcss')
+        expect(deps).not.toContain('@tailwindcss/vite')
+    })
+
+    it('styling tailwind 선택 시 tailwind-setup.md 노트 생성', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            style: {
+                componentDeclaration: 'function',
+                componentExport: 'default',
+                styling: 'tailwind',
+            },
+        })
+
+        const tailwindNote = plan.find((a) => a.dest === '.harness/notes/tailwind-setup.md')
+        expect(tailwindNote).toBeDefined()
+    })
+})
+
+describe('cursor-hooks.json', () => {
+    it('beforeShellExecution에 before-shell-gate와 pre-commit-gate 모두 등록', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            modules: ['design-system', 'lint'],
+        })
+
+        const hooks = plan.find((a) => a.dest === '.cursor/hooks.json')
+        expect(hooks).toBeDefined()
+
+        const hooksJson = JSON.parse(hooks!.content)
+        const beforeShell = hooksJson.hooks.beforeShellExecution
+
+        expect(Array.isArray(beforeShell)).toBe(true)
+        expect(beforeShell).toHaveLength(2)
+        expect(beforeShell[0].command).toContain('before-shell-gate.sh')
+        expect(beforeShell[1].command).toContain('pre-commit-gate.sh')
+    })
+
+    it('preToolUse matcher에 Write, StrReplace, Edit, ApplyPatch 포함', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            modules: ['design-system'],
+        })
+
+        const hooks = plan.find((a) => a.dest === '.cursor/hooks.json')
+        expect(hooks).toBeDefined()
+
+        const hooksJson = JSON.parse(hooks!.content)
+        const preToolUse = hooksJson.hooks.preToolUse
+
+        expect(Array.isArray(preToolUse)).toBe(true)
+        expect(preToolUse[0].matcher).toBe('Write|StrReplace|Edit|ApplyPatch')
+    })
+})

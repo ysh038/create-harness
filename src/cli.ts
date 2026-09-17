@@ -11,6 +11,7 @@ import { detect } from './detect.js'
 import { writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
 import { patchEslintIgnores } from './eslintPatch.js'
+import { patchTailwind } from './tailwindPatch.js'
 import { buildPonytailAction } from './ponytail.js'
 import { getModuleReason } from './i18n.js'
 import {
@@ -491,6 +492,34 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
                 `  설정 배열 안에 아래를 직접 넣으세요 (없으면 eslint가 .harness/ 를 검사합니다):\n` +
                 pc.dim(patch.snippet),
         )
+    }
+
+    // Tailwind 자동 와이어링 (styling === 'tailwind')
+    if (options.style.styling === 'tailwind' && !options.dryRun) {
+        const twResult = patchTailwind(
+            targetDir,
+            options.modules.includes('design-system'),
+        )
+        
+        if (twResult.indexCssPatched) {
+            console.log(
+                `\n${pc.green('Tailwind')} — ${twResult.indexCssPath} 에 @import "tailwindcss" 를 추가했습니다.`,
+            )
+        }
+        
+        if (twResult.viteConfigPatched && twResult.viteConfigPath) {
+            console.log(
+                `${pc.green('Tailwind')} — ${twResult.viteConfigPath} 에 @tailwindcss/vite 플러그인을 추가했습니다.`,
+            )
+        }
+        
+        if (twResult.errors.length > 0) {
+            console.log(
+                `\n${pc.yellow('Tailwind 수동 필요')} — 일부 자동 패치가 실패했습니다:\n` +
+                    twResult.errors.map((e) => `  - ${e}`).join('\n') +
+                    `\n\n  .harness/notes/tailwind-setup.md 를 참조하여 수동으로 설정하세요.`,
+            )
+        }
     }
 
     if (hasStylelintBaseline(detected, options)) {

@@ -55,6 +55,95 @@ const runGate = (input: object, tool = 'cursor'): { permission: string; user_mes
     }
 }
 
+describe('before-shell-gate.mjs — Shell bypass 차단', () => {
+    let shellGateScript = ''
+
+    beforeEach(() => {
+        const srcShellGate = path.join(process.cwd(), 'templates', 'core', 'gates', 'before-shell-gate.mjs')
+        shellGateScript = path.join(testDir, '.harness', 'gates', 'before-shell-gate.mjs')
+        execSync(`cp "${srcShellGate}" "${shellGateScript}"`)
+        
+        // ui-prereq-check.mjs는 이미 beforeEach에서 복사됨
+    })
+
+    const runShellGate = (command: string, tool = 'cursor'): { permission: string; user_message?: string; agent_message?: string } => {
+        const input = { tool_input: { command, cwd: testDir }, command, cwd: testDir }
+        const inputJson = JSON.stringify(input)
+        try {
+            const output = execSync(
+                `echo '${inputJson}' | node "${shellGateScript}" ${tool}`,
+                { encoding: 'utf-8', cwd: testDir }
+            )
+            return JSON.parse(output.trim())
+        } catch (error: any) {
+            if (error.stdout) {
+                return JSON.parse(error.stdout.trim())
+            }
+            throw error
+        }
+    }
+
+    it('npm install은 허용', () => {
+        writeFileSync(
+            path.join(testDir, '.harness', 'config.json'),
+            JSON.stringify({ storybook: 'pending', mode: 'free' }, null, 2)
+        )
+
+        const result = runShellGate('npm install')
+        expect(result.permission).toBe('allow')
+    })
+
+    it('cat > src/pages/LoginPage.tsx는 storybook pending일 때 deny', () => {
+        writeFileSync(
+            path.join(testDir, '.harness', 'config.json'),
+            JSON.stringify({ storybook: 'pending', mode: 'free' }, null, 2)
+        )
+
+        mkdirSync(path.join(testDir, 'src', 'pages'), { recursive: true })
+
+        // 상대 경로 사용 (cwd가 testDir로 설정됨)
+        const result = runShellGate('cat > src/pages/LoginPage.tsx')
+        
+        expect(result.permission).toBe('deny')
+        expect(result.agent_message).toContain('/ds-init')
+    })
+
+    it('node -e writeFileSync(...pages/...)는 storybook pending일 때 deny', () => {
+        writeFileSync(
+            path.join(testDir, '.harness', 'config.json'),
+            JSON.stringify({ storybook: 'pending', mode: 'free' }, null, 2)
+        )
+
+        mkdirSync(path.join(testDir, 'src', 'pages'), { recursive: true })
+
+        // JSON escaping을 위해 백슬래시 제거하고 간단한 형태로
+        const result = runShellGate('node -e fs.writeFileSync src/pages/LoginPage.tsx content')
+        
+        expect(result.permission).toBe('deny')
+        expect(result.agent_message).toContain('Write/StrReplace')
+    })
+
+    it('git commit은 허용 (pre-commit-gate가 별도 실행)', () => {
+        writeFileSync(
+            path.join(testDir, '.harness', 'config.json'),
+            JSON.stringify({ storybook: 'pending', mode: 'free' }, null, 2)
+        )
+
+        const result = runShellGate('git commit -m "test"')
+        expect(result.permission).toBe('allow')
+    })
+
+    it('node script.js (UI write 키워드 없음)는 허용', () => {
+        writeFileSync(
+            path.join(testDir, '.harness', 'config.json'),
+            JSON.stringify({ storybook: 'pending', mode: 'free' }, null, 2)
+        )
+
+        const result = runShellGate('node scripts/build.js')
+        expect(result.permission).toBe('allow')
+    })
+})
+
 describe('pre-write-gate.mjs — Cursor 입력 형식', () => {
     it('Cursor Write 도구 형식을 올바르게 파싱한다', () => {
         // config: storybook pending, .storybook 없음

@@ -3,7 +3,11 @@
     "hooks": {
         "beforeShellExecution": [
             {
-                "command": "./.harness/gates/before-shell-gate.sh cursor"
+                "command": "./.harness/gates/before-shell-gate.sh cursor",
+                "failClosed": true
+            },
+            {
+                "command": "./.harness/gates/pre-commit-gate.sh cursor"
             }
         ],
         "preToolUse": [
