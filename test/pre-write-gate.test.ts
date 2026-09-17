@@ -25,6 +25,11 @@ beforeEach(() => {
     const srcGate = path.join(process.cwd(), 'templates', 'core', 'gates', 'pre-write-gate.mjs')
     gateScript = path.join(testDir, '.harness', 'gates', 'pre-write-gate.mjs')
     execSync(`cp "${srcGate}" "${gateScript}"`)
+    
+    // 공유 체크 모듈 복사 (v0.5.5에서 추가)
+    const srcCheck = path.join(process.cwd(), 'templates', 'core', 'gates', 'ui-prereq-check.mjs')
+    const destCheck = path.join(testDir, '.harness', 'gates', 'ui-prereq-check.mjs')
+    execSync(`cp "${srcCheck}" "${destCheck}"`)
 })
 
 afterEach(() => {

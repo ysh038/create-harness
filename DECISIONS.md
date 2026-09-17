@@ -1428,6 +1428,148 @@ readError?: string         // 실패 시 짧은 에러 메시지
 
 **근본 원인**: 커밋 게이트는 `git commit` 시점에만 걸림. 에이전트가 파일을 쓴 후 커밋하지 않으면 체크가 아예 실행되지 않음.
 
+---
+
+## 33. v0.5.5 — v14 dogfood 실패: Tailwind 실제 설치 + Shell bypass 차단 + 계층 강화
+
+### 배경 (create-harness-demo-v14 dogfood 실패)
+
+두 가지 근본 문제:
+
+**A. Tailwind 선택했지만 실제로 설치/와이어링 안 함**
+- 사용자가 `styling: tailwind` 선택 → config.json에 기록됨
+- 하지만 `tailwindcss`, `@tailwindcss/vite` 패키지 설치 안내 없음
+- Vite config에 플러그인 추가 안내 없음
+- `src/index.css`에 `@import "tailwindcss";` 추가 안내 없음
+- 결과: 에이전트가 "package에 tailwind 없다"고 관찰, tokens.css만 사용
+
+**근본 원인**: CLI가 `styling: tailwind`를 **기록만** 하고 실제 설치/와이어링을 **안 했음**.
+
+**B. Shell bypass — pre-write-gate를 shell 리다이렉트로 우회**
+- `pre-write-gate.mjs`가 Write/StrReplace는 막지만 `tool_name: Shell`은 통과
+- 에이전트가 `cat <<EOF > src/pages/LoginPage.tsx` 같은 heredoc으로 UI 파일 쓰기 성공
+- Storybook pending 상태인데 `.storybook/` 없어도 shell로 쓰면 체크 안 걸림
+- `src/components/**` 경로도 체크 필요 (v14에서 LoginForm을 여기 생성)
+
+**근본 원인**: 파일 쓰기 강제가 Write 도구만 걸고 Shell은 안 걸었음.
+
+### 해결 방안
+
+#### Part A — Tailwind 실제 설치 + 와이어링
+
+**1. requiredDevDeps에 추가**
+- `styling === 'tailwind'` 이고 `design-system` 모듈 선택 시
+- `tailwindcss`, `@tailwindcss/vite` 추가 (Tailwind v4 Vite 플러그인 경로)
+
+**2. 설정 안내 노트 생성**
+- `templates/core/notes/tailwind-setup.md` 생성
+- 패키지 설치 명령
+- Vite config에 `@tailwindcss/vite` 플러그인 추가 예시
+- `src/index.css`에 `@import "tailwindcss";` + tokens.css 유지 예시
+- 디자인 토큰과 Tailwind 연동 (CSS 변수 직접 사용 또는 @theme 별칭)
+- stylelint 가이드 (tokens는 여전히 정본, 유틸리티 클래스는 stylelint 안 됨)
+- Atomic 계층 필요성 강조 (Tailwind는 스타일 방식, 계층 대체 아님)
+
+**3. buildModuleActions에서 조건부 생성**
+- `styling === 'tailwind'` 이고 `design-system` 모듈 있으면
+- `.harness/notes/tailwind-setup.md` 생성
+
+**4. AGENTS.md에 안내 추가**
+- 스타일링 섹션에 Tailwind 설정 필요 경고 (mustache 조건문)
+- `.harness/notes/tailwind-setup.md` 참조
+
+**5. buildVars에 플래그 추가**
+- `TAILWIND_SETUP: String(styling === 'tailwind' && design-system)` 
+
+**왜 자동 패치 안 함?**
+- Vite config 자동 패치는 위험 (기존 플러그인 배열 구조 다양)
+- index.css 자동 패치도 위험 (첫 줄에 넣어야 하는데 기존 import 순서 망가질 수 있음)
+- 대신 명확한 안내 노트 + AGENTS.md 경고로 에이전트가 읽고 수행하게 함
+- eslintPatch처럼 안전한 패턴만 자동, 나머지는 안내
+
+#### Part B — Layered enforcement (Shell bypass 차단)
+
+**1. 공유 체크 모듈 생성**
+- `templates/core/gates/ui-prereq-check.mjs` (새 파일)
+- `isUiFile(relPath)`, `isPageFile(relPath)` — UI 파일 패턴 매칭
+- `UI_PATTERNS`에 `src/components/**` 추가 (v14 dogfood에서 LoginForm 여기 생성)
+- `checkStorybookPrereq(projectRoot, config)` — Storybook 전제조건 체크
+- `checkDesignRefPrereq(projectRoot, config, relPath)` — 디자인 참조 체크
+- pre-write-gate.mjs와 before-shell-gate.mjs 양쪽에서 import하여 사용
+- **드리프트 방지**: 같은 규칙을 두 게이트에서 다르게 구현하지 않음
+
+**2. Shell bypass 차단 게이트 생성**
+- `templates/core/gates/before-shell-gate.sh` + `.mjs` (새 파일)
+- beforeShellExecution 훅으로 실행
+- shell 명령에서 리다이렉트/heredoc/tee 패턴 감지:
+  * `> path` / `>> path` — 리다이렉트
+  * `tee path` — tee 명령
+  * `cat << EOF > path` / `printf "..." > path` — heredoc/printf
+- 안전 명령 패턴 화이트리스트 (npm install, git, node 등)
+- UI 경로로 쓰려는 경우 Storybook + Design ref 체크 (ui-prereq-check.mjs 재사용)
+
+**3. cursor-hooks.json 업데이트**
+- beforeShellExecution → before-shell-gate.sh로 변경 (기존: pre-commit-gate.sh — 잘못됨)
+- preToolUse matcher에 `ApplyPatch` 추가 (`Write|StrReplace|Edit|ApplyPatch`)
+
+**4. pre-write-gate.mjs 리팩토링**
+- ui-prereq-check.mjs의 공유 함수 사용
+- 중복 코드 제거, 체크 로직은 공유 모듈에만 존재
+
+**5. AGENTS.md 최상단에 STOP 체크리스트**
+- Storybook pending 상태일 때만 표시 (mustache 조건문)
+- `.storybook/` 폴더 확인 → 없으면 `/ds-init` 먼저
+- 디자인 참조 확인 (inspire/implement 모드)
+- Write/Shell 게이트가 쓰기 시점에 차단한다는 경고
+
+**6. buildVars에 플래그 추가**
+- `STORYBOOK_PENDING: String(storybook === 'pending')`
+
+### 범위 밖
+
+- sessionStart / stop 훅 (선택적, 이번엔 생략)
+- 전체 Tailwind 자동 패치 (위험 — 안내만)
+- npm publish (PR 병합 후 수동)
+
+### 변경 파일
+
+- `package.json`: 0.5.4 → **0.5.5**
+- `templates/core/notes/tailwind-setup.md` (신규)
+- `templates/core/gates/ui-prereq-check.mjs` (신규 — 공유 체크 모듈)
+- `templates/core/gates/before-shell-gate.sh` (신규)
+- `templates/core/gates/before-shell-gate.mjs` (신규)
+- `templates/core/gates/pre-write-gate.mjs` (리팩토링 — 공유 모듈 사용)
+- `templates/core/gates/cursor-hooks.json` (beforeShellExecution 변경 + matcher 확장)
+- `templates/core/AGENTS.md` (STOP 체크리스트 + Tailwind 경고)
+- `src/registry.ts`:
+  - `requiredDevDeps()`: Tailwind 패키지 추가
+  - `buildVars()`: `TAILWIND_SETUP`, `STORYBOOK_PENDING` 추가
+  - `buildModuleActions()`: Tailwind 노트 조건부 생성
+  - `buildGateActions()`: 새 게이트 파일들 추가
+- `DECISIONS.md`: #33 기록
+- `TODO.md`: v0.5.5 체크리스트
+
+### 테스트
+
+- `requiredDevDeps` with `styling: tailwind` → `tailwindcss`, `@tailwindcss/vite` 포함
+- Shell write to UI path → deny (Storybook pending)
+- Shell `npm install` → allow (안전 명령)
+- pre-write Write to UI path → deny (기존 유지)
+- `src/components/**` 경로 체크 포함 확인
+- Tailwind 노트 생성 확인
+
+### 버전
+
+`package.json` → **0.5.5** (minor — 새 게이트, Tailwind 와이어링, 공유 모듈)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- Shell bypass 차단 게이트 추가 확인
+- Tailwind 노트 생성 확인
+- 테스트 스냅샷 업데이트
+- PR 생성 (main 대상)
+
 ### 해결: preToolUse 훅으로 파일 쓰기 시점 차단
 
 **새 게이트**: `templates/core/gates/pre-write-gate.mjs`
