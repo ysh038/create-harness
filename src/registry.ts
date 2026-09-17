@@ -72,6 +72,7 @@ export const buildVars = (
     ATOMIC_BASELINE: String(hasAtomicBaseline(detected, options)),
     PAGE_RAW_JSX_FILES: String(detected.pagesWithRawJsx.length),
     STORYBOOK_STATE: options.storybook,
+    STORYBOOK_PENDING: String(options.storybook === 'pending'),
     DESIGN_MODE: options.mode,
     HAS_DESIGN_REFS: String(options.mode !== 'free'),
     DESIGN_FIDELITY: options.fidelity ?? '',
@@ -79,6 +80,8 @@ export const buildVars = (
     COMPONENT_DECLARATION: options.style.componentDeclaration,
     COMPONENT_EXPORT: options.style.componentExport,
     STYLING: options.style.styling,
+    TAILWIND_SETUP: String(options.style.styling === 'tailwind' && options.modules.includes('design-system')),
+    SHOW_STOP_CHECKLIST: String(options.modules.includes('design-system') && options.storybook === 'pending'),
 })
 
 /**
@@ -336,6 +339,13 @@ const buildGateActions = (
     // design-system 모듈이 있으면 pre-write-gate 추가 (Storybook 체크) (0.5.4)
     // 또는 inspire/implement 모드면 추가 (design ref 체크)
     if (options.modules.includes('design-system') || options.mode !== 'free') {
+        // 공유 체크 모듈 추가 (0.5.5)
+        actions.push({
+            dest: '.harness/gates/ui-prereq-check.mjs',
+            content: loadTemplate('core/gates/ui-prereq-check.mjs', vars),
+            module: 'core',
+        })
+        
         actions.push(
             {
                 dest: '.harness/gates/pre-write-gate.sh',
@@ -346,6 +356,17 @@ const buildGateActions = (
             {
                 dest: '.harness/gates/pre-write-gate.mjs',
                 content: loadTemplate('core/gates/pre-write-gate.mjs', vars),
+                module: 'core',
+            },
+            {
+                dest: '.harness/gates/before-shell-gate.sh',
+                content: loadTemplate('core/gates/before-shell-gate.sh', vars),
+                module: 'core',
+                executable: true,
+            },
+            {
+                dest: '.harness/gates/before-shell-gate.mjs',
+                content: loadTemplate('core/gates/before-shell-gate.mjs', vars),
                 module: 'core',
             },
         )
@@ -438,6 +459,15 @@ const buildModuleActions = (
                 module: 'design-system',
             },
         )
+        
+        // Tailwind 스타일링 선택 시 설정 안내 노트 생성
+        if (options.style.styling === 'tailwind') {
+            actions.push({
+                dest: '.harness/notes/tailwind-setup.md',
+                content: loadTemplate('core/notes/tailwind-setup.md', vars),
+                module: 'design-system',
+            })
+        }
     }
 
     if (options.modules.includes('auth-http')) {
@@ -606,6 +636,10 @@ export const requiredDevDeps = (options: IScaffoldOptions): string[] => {
     const deps: string[] = []
     if (options.modules.includes('design-system')) {
         deps.push('stylelint', 'stylelint-declaration-strict-value')
+        // Tailwind v4 Vite 플러그인 경로 (사용자가 tailwind 스타일링을 선택한 경우)
+        if (options.style.styling === 'tailwind') {
+            deps.push('tailwindcss', '@tailwindcss/vite')
+        }
     }
     if (options.modules.includes('lint')) {
         deps.push(

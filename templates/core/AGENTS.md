@@ -3,6 +3,27 @@
 > 이 파일은 모든 AI 에이전트(Cursor, Claude Code 등)가 항상 읽는 정본이다.
 > 짧게 유지한다. 상세 규칙은 `{{RULES_DIR}}/` 에 있고, 해당 파일을 만질 때 로드된다.
 
+{{#if SHOW_STOP_CHECKLIST}}
+## ⛔ STOP — UI 작업 전 체크리스트
+
+**Storybook pending** 상태입니다. 새 UI 파일(페이지/컴포넌트)을 작성하기 **전에 반드시**:
+
+1. **`.storybook/` 폴더가 있는지 확인**
+   - 없으면 → `/ds-init` 먼저 실행 (Storybook 온디맨드 설치)
+   - 있으면 → 바로 진행 가능
+
+**Write/Shell 게이트가 위반 시 파일 쓰기를 차단**합니다. 커밋 전이 아니라 **쓰기 시점에** 막힙니다.
+
+---
+
+{{/if}}
+{{#if HAS_DESIGN_REFS}}
+## ⚠️ 디자인 참조 체크 (페이지/화면)
+
+`{{DESIGN_MODE}}` 모드: 새 페이지/화면 작성 전 디자인 링크를 물어봐야 합니다 (있음/없음/나중에).
+읽기 실패 시 → **STOP**. 다른 참조 요청 또는 명시적 waive.
+
+{{/if}}
 ## 프로젝트 개요
 
 <!-- TODO: 한 문단으로 채우세요. 무엇을 하는 서비스이고, 핵심 도메인 용어는 무엇인지 -->
@@ -33,7 +54,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 - **디자인 모드**: `{{DESIGN_MODE}}`{{#if HAS_DESIGN_FIDELITY}} (충실도: `{{DESIGN_FIDELITY}}`){{/if}}
 - **컴포넌트 선언**: `{{COMPONENT_DECLARATION}}`
 - **컴포넌트 export**: `{{COMPONENT_EXPORT}}`
-- **스타일링**: `{{STYLING}}`
+- **스타일링**: `{{STYLING}}`{{#if TAILWIND_SETUP}}
+  ⚠️ Tailwind 설정이 필요합니다 — `.harness/notes/tailwind-setup.md` 참조{{/if}}
 
 디자인 모드별 행동:
 - `free` — 디자인 참조 없이 자율 구현

@@ -154,6 +154,40 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/14
 - [ ] npm publish (PR 병합 후)
 
+## v0.5.5
+
+### Part A — Tailwind 실제 설치 + 와이어링
+- [x] src/registry.ts: requiredDevDeps에 tailwindcss, @tailwindcss/vite 추가
+- [x] templates/core/notes/tailwind-setup.md 생성 (설정 안내)
+- [x] src/registry.ts: buildModuleActions에 Tailwind 노트 조건부 생성
+- [x] templates/core/AGENTS.md: Tailwind 경고 추가
+- [x] src/registry.ts: buildVars에 TAILWIND_SETUP 플래그 추가
+
+### Part B — Layered enforcement (Shell bypass 차단)
+- [x] templates/core/gates/ui-prereq-check.mjs 생성 (공유 체크 모듈)
+- [x] templates/core/gates/before-shell-gate.sh 생성
+- [x] templates/core/gates/before-shell-gate.mjs 생성 (Shell bypass 차단)
+- [x] templates/core/gates/pre-write-gate.mjs 리팩토링 (공유 모듈 사용)
+- [x] templates/core/gates/cursor-hooks.json: beforeShellExecution 변경 + matcher 확장
+- [x] templates/core/AGENTS.md: STOP 체크리스트 추가
+- [x] src/registry.ts: buildVars에 STORYBOOK_PENDING 플래그 추가
+- [x] src/registry.ts: buildGateActions에 새 게이트 파일들 추가
+
+### 문서 및 버전
+- [x] package.json: 버전 0.5.5
+- [x] DECISIONS.md: #33 기록 (v14 dogfood 실패 분석)
+- [x] TODO.md: v0.5.5 체크리스트 추가
+
+### 테스트
+- [x] test/pre-write-gate.test.ts: ui-prereq-check.mjs 복사 추가
+- [x] 테스트 스냅샷 재생성 (새 게이트 파일들 추가)
+- [x] npm run check 통과 (typecheck → build → test) — 74/74 tests passed
+
+### PR
+- [x] 변경사항 커밋 및 푸시
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/15
+- [ ] npm publish (PR 병합 후)
+
 ## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

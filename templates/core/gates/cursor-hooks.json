@@ -3,13 +3,17 @@
     "hooks": {
         "beforeShellExecution": [
             {
+                "command": "./.harness/gates/before-shell-gate.sh cursor",
+                "failClosed": true
+            },
+            {
                 "command": "./.harness/gates/pre-commit-gate.sh cursor"
             }
         ],
         "preToolUse": [
             {
                 "command": "./.harness/gates/pre-write-gate.sh cursor",
-                "matcher": "Write|StrReplace",
+                "matcher": "Write|StrReplace|Edit|ApplyPatch",
                 "failClosed": true
             }
         ]
