@@ -212,8 +212,8 @@
 - [x] package.json: 버전 0.5.7
 - [x] DECISIONS.md: #35 기록
 - [x] TODO.md: v0.5.7 체크리스트 추가
-- [ ] npm run check 통과 (typecheck → build → test)
-- [ ] PR 생성 (main 대상)
+- [x] npm run check 통과 (typecheck → build → test) — 88/88 tests passed
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/17
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
