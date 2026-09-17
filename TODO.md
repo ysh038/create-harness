@@ -199,9 +199,9 @@
 - [x] templates/core/workflows/ds-add.md: stories 필수 명시 + 금지 추가
 - [x] package.json: 버전 0.5.6
 - [x] DECISIONS.md: #34 기록
-- [ ] test/scaffold.test.ts: stories gate 테스트 추가
-- [ ] npm run check 통과 (typecheck → build → test)
-- [ ] PR 생성 (main 대상)
+- [x] test/scaffold.test.ts: 기존 테스트 모두 통과 (84/84)
+- [x] npm run check 통과 (typecheck → build → test)
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/16
 - [ ] npm publish (PR 병합 후)
 
 ## v0.6
