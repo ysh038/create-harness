@@ -204,6 +204,18 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/16
 - [ ] npm publish (PR 병합 후)
 
+## v0.5.7
+
+- [x] templates/core/workflows/ds-add.md: "e) 섹션별 구현" 체크리스트 추가
+- [x] templates/core/workflows/ds-ref.md: 페이지 참조 단위 노트 추가
+- [x] templates/core/AGENTS.md: 복잡한 페이지 포인터 추가
+- [x] package.json: 버전 0.5.7
+- [x] DECISIONS.md: #35 기록
+- [x] TODO.md: v0.5.7 체크리스트 추가
+- [ ] npm run check 통과 (typecheck → build → test)
+- [ ] PR 생성 (main 대상)
+- [ ] npm publish (PR 병합 후)
+
 ## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

@@ -1723,3 +1723,76 @@ pending은 "설치 전"이라 유예했지만, ready는 "이미 설치됨"이므
 - 테스트: 페이지 쓰기 시 design-references.json 항목 없으면 deny
 - PR 생성 (main 대상)
 
+---
+
+## 35. v0.5.7 — 섹션별 Figma 구현 소프트 가이던스 (시각적 충실도 개선)
+
+### 배경
+
+사용자가 복잡한 페이지 디자인을 제공했을 때, 에이전트가 "한 번에 전체 페이지를 재작성"하는 패턴이 
+반복됐다. 결과:
+- 시각적 충실도 낮음 (Figma와 거리가 먼 결과물)
+- 큰 리팩토링 단위로 인한 에러 증가
+- 섹션 간 불일치 (헤더는 괜찮은데 폼은 빠진 상태 등)
+
+하드 게이트로 강제하는 것(섹션별 Figma URL 또는 inventory JSON 제출)은 사용자가 명시적으로 거부했다 
+— 너무 무거운 프로세스.
+
+### 해결 (소프트 가이던스만)
+
+**원칙**: "하나의 페이지 참조로 충분, 작업은 섹션별로"
+
+1. **ds-add.md에 "e) 섹션별 구현" 체크리스트 추가**:
+   - 복잡한 페이지 = 한 번에 다시 만들지 않음
+   - 페이지 URL 하나 유지 (추가 섹션 URL 불필요)
+   - 전체 한 번 읽기 (screenshot + layout/token)
+   - 위→아래 섹션별 (헤더 → 폼 → 패널)
+   - 필요시 같은 페이지에서 다른 node-id로 섹션 재읽기
+   - atoms → molecules → organisms + 스토리
+   - 각 섹션 후 Figma/Storybook과 비교
+   - 목표: Figma와 최대한 가깝게
+
+2. **ds-ref.md 용도 섹션에 노트 추가**:
+   - "페이지 참조 단위" — 하나의 URL로 충분
+   - 섹션별 URL 등록 불필요
+   - 같은 페이지에서 node-id만 바꿔 재읽기 가능 (선택)
+
+3. **AGENTS.md 디자인 참조 맵 섹션에 짧은 포인터**:
+   - "복잡한 페이지: 한 번에 재작성 X, 섹션별 진행"
+   - 페이지 URL 하나로 충분, 자세한 내용은 /ds-add 참조
+
+### 하지 않는 것
+
+- 하드 게이트 추가 (섹션별 URL 강제, inventory JSON 제출)
+- cursor-hooks.json / pre-write-gate 변경
+- 새 체크 스크립트 생성
+- 단위 테스트 추가 (문서 변경이므로 스냅샷만 영향)
+
+### 왜 소프트만?
+
+- 사용자 명시적 거부: 하드 워크플로는 과도한 마찰
+- 문서 가이던스로 충분한 경우: inspire/implement 모드 정책이 이미 읽기를 강제하므로, 
+  "어떻게 읽고 만들 것인가"는 에이전트의 전략 문제
+- 점진적 개선: 이번 soft guidance 효과를 dogfood로 측정 후, 필요하면 나중에 hard gate 추가 고려
+
+### 변경 파일
+
+- `package.json`: 0.5.6 → **0.5.7**
+- `templates/core/workflows/ds-add.md`: "e) 섹션별 구현" 체크리스트 추가
+- `templates/core/workflows/ds-ref.md`: 페이지 참조 단위 노트 추가
+- `templates/core/AGENTS.md`: 복잡한 페이지 처리 포인터 추가
+- `DECISIONS.md`: #35 기록
+- `TODO.md`: v0.5.7 체크리스트
+
+### 버전
+
+`package.json` → **0.5.7** (patch — 문서 개선, 정책 명확화)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- 문서 3개 업데이트 확인 (ds-add.md, ds-ref.md, AGENTS.md)
+- PR 생성 (main 대상)
+- npm publish (PR 병합 후, 수동)
+
+
