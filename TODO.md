@@ -188,6 +188,22 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/15
 - [ ] npm publish (PR 병합 후)
 
+## v0.5.6
+
+- [x] ui-prereq-check.mjs: isDesignSystemComponent + checkStoriesPair 추가
+- [x] ui-prereq-check.mjs: EXCLUDE_PATTERNS에 Example* 추가
+- [x] pre-write-gate.mjs: stories 체크 호출 (새 DS 컴포넌트)
+- [x] before-shell-gate.mjs: stories 체크 호출 (새 DS 컴포넌트)
+- [x] storybook-check.mjs: Part 2 추가 (ready 상태 전용, 커밋 게이트)
+- [x] templates/core/AGENTS.md: 절대 금지에 stories 필수 추가
+- [x] templates/core/workflows/ds-add.md: stories 필수 명시 + 금지 추가
+- [x] package.json: 버전 0.5.6
+- [x] DECISIONS.md: #34 기록
+- [x] test/scaffold.test.ts: 기존 테스트 모두 통과 (84/84)
+- [x] npm run check 통과 (typecheck → build → test)
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/16
+- [ ] npm publish (PR 병합 후)
+
 ## v0.6
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

@@ -1570,6 +1570,103 @@ readError?: string         // 실패 시 짧은 에러 메시지
 - 테스트 스냅샷 업데이트
 - PR 생성 (main 대상)
 
+## 34. v0.5.6 — Storybook ready 시 새 design-system 컴포넌트는 stories 파일 필수 (hard gate)
+
+### 배경
+
+사용자 결정:
+- **NO** Figma staged section / inventory JSON hard gate (rejected)
+- **YES** stories-pair hard gate: Storybook ready + 새 DS 컴포넌트 → stories 필수
+- Soft: ds-add wording 강화 (reusable atoms/molecules, not inline in organisms)
+- play() 함수: soft only (not hard in 0.5.6)
+
+### 문제
+
+Storybook이 ready 상태인데도 에이전트가 stories 없는 컴포넌트를 만들어 누적되는 문제.
+pending은 "설치 전"이라 유예했지만, ready는 "이미 설치됨"이므로 stories를 강제할 시점.
+
+### 해결: 3-layer enforcement (Write + Shell + Commit)
+
+**조건**:
+- `.harness/config.json` `storybook === 'ready'`
+- `.storybook/` 존재 (실제 설치됨)
+
+**대상**:
+- 새 파일만: `src/design-system/{atoms,molecules,organisms}/**/*.tsx`
+- 제외: `*.stories.*`, `index.ts`, `tokens.*`, `_story-template*`, `Example*`
+
+**요구사항**:
+- Sibling stories 파일 존재: `Button.tsx` → `Button.stories.tsx` (같은 폴더)
+- 없으면 deny (agent_message: "/ds-add에서 stories와 함께 작성")
+
+**Scope limits**:
+- 새 파일만 (commit gate: `--diff-filter=A`, write/shell: 파일 없으면 deny)
+- 기존 컴포넌트 편집 허용 (brownfield grace)
+- `src/components/**` 도메인 컴포넌트: 이번 1차에서 제외
+
+**구현**:
+
+1. **`ui-prereq-check.mjs` 확장**:
+   - `isDesignSystemComponent(relPath)` 추가
+   - `checkStoriesPair(projectRoot, config, relPath, isNewFile)` 추가
+   - EXCLUDE_PATTERNS에 `/Example[A-Z]/` 추가
+
+2. **`pre-write-gate.mjs`**:
+   - Write 도구로 새 DS 컴포넌트 생성 시 stories 체크
+   - isNewFile = !existsSync(absPath)
+
+3. **`before-shell-gate.mjs`**:
+   - Shell 리다이렉트로 새 DS 컴포넌트 쓰기 시 stories 체크
+
+4. **`storybook-check.mjs` 확장** (커밋 게이트):
+   - Part 2 추가: ready 상태에서만 실행
+   - staged 새 DS 컴포넌트 (`--diff-filter=A`) 중 stories 누락 → 실패
+   - 누락 파일 목록 + 해결 방법 출력
+
+5. **문서**:
+   - `AGENTS.md` 절대 금지: "Storybook ready: 새 DS 컴포넌트를 stories 없이 커밋"
+   - `ds-add.md` step 5: "**Storybook ready: stories 필수** (pending은 권장)"
+   - `ds-add.md` 금지: "Storybook ready: 스토리 없는 컴포넌트"
+
+### 범위 밖
+
+- `src/components/**` 도메인 컴포넌트 (1차 제외)
+- Figma staged section workflow (rejected)
+- Inventory JSON hard gate (rejected)
+- play() 함수 hard enforcement (soft only)
+
+### 변경 파일
+
+- `package.json`: 0.5.5 → **0.5.6**
+- `templates/core/gates/ui-prereq-check.mjs`: stories 체크 함수 추가
+- `templates/core/gates/pre-write-gate.mjs`: stories 체크 호출
+- `templates/core/gates/before-shell-gate.mjs`: stories 체크 호출
+- `templates/core/gates/storybook-check.mjs`: Part 2 추가 (ready 전용)
+- `templates/core/AGENTS.md`: 절대 금지 + 워크플로 강조
+- `templates/core/workflows/ds-add.md`: stories 필수 명시 + 금지 추가
+- `DECISIONS.md`: #34 기록
+- `TODO.md`: v0.5.6 체크리스트
+
+### 테스트
+
+- ready + 새 Button.tsx (stories 없음) → deny
+- ready + 새 Button.tsx + Button.stories.tsx → allow
+- pending (stories 체크 skip)
+- Example* 제외 확인
+- 기존 파일 편집 (stories 없어도 allow)
+
+### 버전
+
+`package.json` → **0.5.6** (patch — gate 강화, 정책 명확화)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- 3-layer gate 추가 확인 (write + shell + commit)
+- 문서 업데이트 확인
+- PR 생성 (main 대상)
+- npm publish (PR 병합 후, 수동)
+
 ### 해결: preToolUse 훅으로 파일 쓰기 시점 차단
 
 **새 게이트**: `templates/core/gates/pre-write-gate.mjs`

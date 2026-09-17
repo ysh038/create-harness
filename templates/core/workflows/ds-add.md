@@ -79,7 +79,8 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
    - 어떤 스타일 방식이든 클릭 가능한 요소는 최소 `:hover`·`:focus-visible` 두 상태 포함
      (`30-design-system` 필수 규칙). 뜬 요소는 계층에 맞는 `--shadow-*`, 상태 전환에는
      `--duration-*`/`--easing-*` — 언제 쓰는지는 `30-design-system` 표 참고
-   - `<Name>.stories.tsx` — `src/design-system/_story-template.tsx` 형식을 따르고
+   - **`<Name>.stories.tsx` — Storybook ready 상태에서 필수** (pending은 권장):
+     `src/design-system/_story-template.tsx` 형식을 따르고
      `title` 은 계층 그대로(`Atoms/Button`), **play 함수 필수**:
      주요 상호작용(클릭·입력)과 포커스·aria 상태를 단정한다
      
@@ -88,6 +89,8 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
        실제 화면에서 쓰이는 조합을 보여준다(예: Login 화면에서 fullWidth Button + size="large")
      - "기본 예제만 있고 실제 쓰이는 조합은 스토리에 없다"면 변형 검증이 안 된다
      - 새 화면을 만들 때 기존 컴포넌트의 variant/prop이 충분한지 스토리를 먼저 확인한다
+     
+     **⚠️ Storybook ready: stories 없는 컴포넌트는 Write/Shell 게이트 + 커밋 게이트가 차단**
    - `index.ts` — 공개 API
 6. **검증**: 스토리 테스트와 stylelint, lint(계층 위반 검사) 통과 확인. UI 완성도(인터랙션
    상태·트랜지션·그림자)는 정적 분석으로 못 잡으므로 `/ux-review`로 별도 확인한다.
@@ -99,5 +102,5 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
 - 페이지 파일 안에 일회성 버튼·인풋 스타일 작성 (드리프트의 시작)
 - 계층 건너뛰기 — atom 없이 organism부터 만들기
 - atom/molecule 안에서 도메인 타입·쿼리 훅·전역 스토어 사용
-- 스토리 없는 컴포넌트
+- **Storybook ready: 스토리 없는 컴포넌트 (Write/Shell 게이트 + 커밋 게이트가 차단)**
 - 토큰에 없는 색·간격을 쓰기 위해 인라인 style로 우회

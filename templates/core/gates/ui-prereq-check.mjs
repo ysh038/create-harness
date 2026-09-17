@@ -36,12 +36,13 @@ export const PAGE_PATTERNS = [
 ]
 
 /**
- * 제외 패턴 — stories, tokens, _story-template
+ * 제외 패턴 — stories, tokens, _story-template, Example*
  */
 export const EXCLUDE_PATTERNS = [
     /\.stories\./,
     /_story-template/,
     /\/tokens\./,
+    /\/Example[A-Z]/,
 ]
 
 /**
@@ -190,6 +191,57 @@ export function checkDesignRefPrereq(projectRoot, config, relPath) {
             deny: true,
             userMsg: `${relPath}의 디자인 참조 상태(${entry.status})가 부적절합니다. implement 모드는 linked(읽기 성공) 또는 waived가 필요합니다.`,
             agentMsg: `⚠️ implement 모드: 디자인 참조 상태가 '${entry.status}'입니다. linked(lastReadOk: true) 또는 waived가 필요합니다.`,
+        }
+    }
+
+    return { allow: true }
+}
+
+/**
+ * 주어진 경로가 design-system 컴포넌트 파일인지 판단
+ */
+export function isDesignSystemComponent(relPath) {
+    if (EXCLUDE_PATTERNS.some((p) => p.test(relPath))) {
+        return false
+    }
+    const dsPattern = /^src\/design-system\/(atoms|molecules|organisms)\/.*\.tsx?$/
+    return dsPattern.test(relPath)
+}
+
+/**
+ * Stories pair 체크 — Storybook ready 시 새 DS 컴포넌트는 stories 파일 필요
+ * @returns {allow: true} | {deny: true, userMsg, agentMsg}
+ */
+export function checkStoriesPair(projectRoot, config, relPath, isNewFile) {
+    const storybookState = config.storybook
+    if (storybookState !== 'ready') {
+        return { allow: true }
+    }
+
+    const storybookDir = path.join(projectRoot, '.storybook')
+    if (!existsSync(storybookDir)) {
+        return { allow: true }
+    }
+
+    if (!isDesignSystemComponent(relPath)) {
+        return { allow: true }
+    }
+
+    // 기존 파일 편집은 허용 (brownfield grace)
+    if (!isNewFile) {
+        return { allow: true }
+    }
+
+    // 새 DS 컴포넌트: sibling stories 파일 필요
+    const dir = path.dirname(path.join(projectRoot, relPath))
+    const base = path.basename(relPath, path.extname(relPath))
+    const storiesPath = path.join(dir, `${base}.stories.tsx`)
+    
+    if (!existsSync(storiesPath)) {
+        return {
+            deny: true,
+            userMsg: `새 design-system 컴포넌트(${relPath})는 stories 파일이 필요합니다. ${base}.stories.tsx 파일을 함께 작성하세요.`,
+            agentMsg: `⚠️ Storybook ready 상태: 새 design-system 컴포넌트는 반드시 stories 파일과 함께 작성해야 합니다.\n\n${relPath} → ${base}.stories.tsx 필요\n\n/ds-add 워크플로에서 컴포넌트와 stories를 함께 작성하세요.`,
         }
     }
 

@@ -13,11 +13,14 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
 import {
     isUiFile,
+    isDesignSystemComponent,
     findProjectRoot,
     checkStorybookPrereq,
     checkDesignRefPrereq,
+    checkStoriesPair,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -126,6 +129,18 @@ if (storybookCheck.deny) {
 const designRefCheck = checkDesignRefPrereq(projectRoot, config, relPath)
 if (designRefCheck.deny) {
     respond('deny', designRefCheck.userMsg, designRefCheck.agentMsg)
+}
+
+// 3. Stories pair 체크 (Storybook ready + 새 DS 컴포넌트)
+if (isDesignSystemComponent(relPath)) {
+    // Write로 새 파일 생성 중 (기존 파일 없음 → 새 파일)
+    const absPath = path.resolve(filePath)
+    const isNewFile = !existsSync(absPath)
+    
+    const storiesCheck = checkStoriesPair(projectRoot, config, relPath, isNewFile)
+    if (storiesCheck.deny) {
+        respond('deny', storiesCheck.userMsg, storiesCheck.agentMsg)
+    }
 }
 
 // 모든 체크 통과
