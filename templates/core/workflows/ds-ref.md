@@ -110,6 +110,10 @@ URL을 등록할 필요는 없다 — 같은 페이지에서 다른 node-id로 �
   - `false` — 마지막 읽기 실패, `readError` 참조
   - `undefined` — 아직 읽기 시도 안 함
 - **성공 후에만** `status: 'linked'` + `lastReadOk: true`. 실패한 시도는 fake `linked`로 남기지 않음.
+- `layoutStatus` (선택, page 항목만): 진행 상황 메모용 — `scaffolded` / `filled`.
+  **사람이 진행 상황을 보기 위한 기록일 뿐이며, 어떤 체크도 이 필드를 근거로 판단하지 않는다.**
+  layout-first 판정은 항상 페이지 파일 안의 `data-slot` 유무로 한다 — 파일이 정본이고,
+  이 필드는 갱신을 잊으면 실제와 어긋날 수 있기 때문이다.
 
 ## 출력
 

@@ -216,7 +216,26 @@
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/17
 - [ ] npm publish (PR 병합 후)
 
-## v0.6
+## v0.6.0 — Layout-first (DECISIONS #36)
+
+- [x] ui-prereq-check.mjs: checkLayoutScaffold / hasSubstanceImport / SLOT_MARKER / findDesignRefEntry
+- [x] pre-write-gate.mjs: layout 체크 연결 + Edit·MultiEdit 입력 파싱
+- [x] before-shell-gate.mjs: layout 체크 연결 + existsSync import 버그 수정
+- [x] claude-settings.json: matcher 를 Write|Edit|MultiEdit|StrReplace|ApplyPatch 로 수정
+- [x] claude-settings.json: Bash matcher 에 before-shell-gate.sh 연결 (누락돼 있었음)
+- [x] Claude 응답의 permissionDecisionReason 을 agentMsg 우선으로 변경
+- [x] gate.mjs: 커밋 시 경고만 출력 (동적 import)
+- [x] ds-add.md: Read → Plan → Layout scaffold → Fill 재구성
+- [x] ds-ref.md: layoutStatus 는 추적용, 판정 근거 아님
+- [x] AGENTS.md: layout-first 포인터 + 금지 항목
+- [x] test/layout-first.test.ts: 15 테스트 추가
+- [x] package.json: 버전 0.6.0
+- [x] DECISIONS.md: #36 기록
+- [ ] npm run check 통과 (typecheck → build → test)
+- [ ] PR 생성 (main 대상)
+- [ ] npm publish (PR 병합 후)
+
+## 아이디어 (버전 미정)
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)
 

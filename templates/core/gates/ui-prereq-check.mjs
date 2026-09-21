@@ -104,6 +104,18 @@ export function checkStorybookPrereq(projectRoot, config) {
 }
 
 /**
+ * design-references.json 에서 페이지 항목 찾기 (codePath 일치 → 파일명 일치)
+ */
+export function findDesignRefEntry(designRefs, relPath) {
+    const entries = designRefs.entries || []
+    return entries.find((e) => {
+        if (!e.codePath) return false
+        if (e.codePath === relPath) return true
+        return path.basename(e.codePath) === path.basename(relPath)
+    })
+}
+
+/**
  * 디자인 참조 전제조건 체크 (페이지 파일만)
  * @returns {allow: true} | {deny: true, userMsg, agentMsg}
  */
@@ -137,13 +149,7 @@ export function checkDesignRefPrereq(projectRoot, config, relPath) {
         }
     }
 
-    const entries = designRefs.entries || []
-    const entry = entries.find((e) => {
-        if (e.codePath === relPath) return true
-        const entryFileName = path.basename(e.codePath)
-        const pageFileName = path.basename(relPath)
-        return entryFileName === pageFileName
-    })
+    const entry = findDesignRefEntry(designRefs, relPath)
 
     if (!entry) {
         return {
@@ -246,4 +252,124 @@ export function checkStoriesPair(projectRoot, config, relPath, isNewFile) {
     }
 
     return { allow: true }
+}
+
+/**
+ * Layout scaffold 흔적 — 페이지 파일에 data-slot 속성이 있으면 뼈대가 먼저 작성된 것으로 본다 (0.6.0)
+ */
+export const SLOT_MARKER = /\bdata-slot\s*=/
+
+const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g
+
+/**
+ * 텍스트에 "알맹이" import가 있는지 판단 (0.6.0)
+ * 알맹이 = 도메인 컴포넌트(components/) 또는 design-system molecule/organism.
+ * atom·토큰·스타일 파일은 뼈대 단계에서도 허용한다 (Stack 같은 레이아웃 atom 대응).
+ */
+export function hasSubstanceImport(text) {
+    if (!text) return false
+    for (const match of text.matchAll(IMPORT_SPECIFIER)) {
+        const spec = match[1]
+        if (/\.(css|scss|sass|less)$/.test(spec)) continue
+        if (/(^|\/)components\//.test(spec)) return true
+        if (/(^|\/)design-system\/(molecules|organisms)(\/|$)/.test(spec)) return true
+    }
+    return false
+}
+
+/**
+ * Layout-first 체크 — implement 모드에서 페이지에 알맹이를 쓰기 전에 뼈대(data-slot)가 있어야 한다 (0.6.0)
+ *
+ * 판정 근거는 "디스크에 이미 있는" 페이지 파일이다. 뼈대와 알맹이를 한 번의 쓰기로 넣으면
+ * 디스크에는 아직 흔적이 없으므로 차단된다 — 뼈대 쓰기와 채우기를 분리하는 것이 목적.
+ *
+ * @param incomingText 이번 쓰기로 들어갈 텍스트 (Write 내용, Edit new_string, shell 명령)
+ * @returns {allow: true} | {deny: true, userMsg, agentMsg}
+ */
+export function checkLayoutScaffold(projectRoot, config, relPath, incomingText) {
+    if (config.mode !== 'implement') {
+        return { allow: true }
+    }
+    if (!isPageFile(relPath)) {
+        return { allow: true }
+    }
+
+    // linked 참조가 있는 페이지만 — waived/항목 없음은 대상 아님 (항목 없음은 design-ref 체크가 처리)
+    const designRefsPath = path.join(projectRoot, '.harness', 'design-references.json')
+    let entry
+    try {
+        entry = findDesignRefEntry(JSON.parse(readFileSync(designRefsPath, 'utf-8')), relPath)
+    } catch {
+        return { allow: true }
+    }
+    if (!entry || entry.status !== 'linked') {
+        return { allow: true }
+    }
+
+    const absPath = path.join(projectRoot, relPath)
+    const existing = existsSync(absPath) ? readFileSync(absPath, 'utf-8') : ''
+
+    // 뼈대가 이미 있음 → 채우기 단계
+    if (SLOT_MARKER.test(existing)) {
+        return { allow: true }
+    }
+    // 이미 알맹이가 들어 있는 기존 페이지 → brownfield grace
+    if (hasSubstanceImport(existing)) {
+        return { allow: true }
+    }
+    // 이번 쓰기가 뼈대 자체 (알맹이 import 없음) → 허용
+    if (!hasSubstanceImport(incomingText)) {
+        return { allow: true }
+    }
+
+    return {
+        deny: true,
+        userMsg: `${relPath}: implement 모드에서는 페이지 레이아웃 뼈대(data-slot)를 먼저 작성한 뒤 컴포넌트를 채워야 합니다.`,
+        agentMsg: `⚠️ implement 모드 layout-first: ${relPath} 에 뼈대가 없는데 알맹이(components/ 또는 design-system molecule/organism import)를 쓰려고 합니다.\n\n순서 (/ds-add 참조):\n1. Plan — 슬롯 트리 + Atomic 목록 + 채우기 순서를 먼저 적는다\n2. Layout scaffold — 페이지에 빈 슬롯만 작성: <section data-slot="overview" /> 처럼 레이아웃(display/gap/토큰)과 data-slot만. 알맹이 import 없이.\n3. Fill — 뼈대가 저장된 뒤 atoms → 핵심 molecule → organisms 순으로 슬롯을 채운다\n\n뼈대와 알맹이를 한 번에 쓰면 계속 차단됩니다. 뼈대만 먼저 쓰세요.`,
+    }
+}
+
+/**
+ * 커밋 시점 보조 경고 (0.6.0) — 차단하지 않고 메시지만 돌려준다.
+ * 쓰기 시점 체크를 피해서 들어온 페이지(예: 하네스 설치 전에 만든 파일)를 알려주는 용도.
+ * @param relPaths 커밋에 포함된 상대 경로 목록
+ * @returns string[] — 경고 없으면 빈 배열
+ */
+export function collectLayoutWarnings(projectRoot, config, relPaths) {
+    if (config.mode !== 'implement') {
+        return []
+    }
+
+    let designRefs
+    try {
+        const designRefsPath = path.join(projectRoot, '.harness', 'design-references.json')
+        designRefs = JSON.parse(readFileSync(designRefsPath, 'utf-8'))
+    } catch {
+        return []
+    }
+
+    const warnings = []
+    for (const relPath of relPaths) {
+        if (!isPageFile(relPath)) continue
+
+        const entry = findDesignRefEntry(designRefs, relPath)
+        if (!entry || entry.status !== 'linked') continue
+
+        const absPath = path.join(projectRoot, relPath)
+        if (!existsSync(absPath)) continue
+
+        let content = ''
+        try {
+            content = readFileSync(absPath, 'utf-8')
+        } catch {
+            continue
+        }
+        if (SLOT_MARKER.test(content)) continue
+        if (!hasSubstanceImport(content)) continue
+
+        warnings.push(
+            `${relPath}: 레이아웃 뼈대(data-slot) 없이 컴포넌트가 채워져 있습니다. 다음 작업 때 슬롯 구조로 정리하세요.`,
+        )
+    }
+    return warnings
 }

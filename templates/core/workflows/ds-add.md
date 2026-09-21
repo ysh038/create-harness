@@ -1,10 +1,21 @@
 ---
-description: Break a screen into Atomic layers and build components bottom-up (atom → molecule → organism) BEFORE writing the page.
+description: Read the design, plan the slots, scaffold the page layout, then fill it bottom-up (atom → molecule → organism).
 ---
 
-# /ds-add — 페이지 전에 계층부터
+# /ds-add — Read → Plan → Layout scaffold → Fill
 
-UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전에** 실행하는 절차다.
+UI 작업 지시를 받았을 때 따르는 절차다. 큰 흐름은 네 단계다:
+
+| 단계 | 하는 일 | 산출물 |
+|------|---------|--------|
+| **0. Read** | 디자인 참조 확인·읽기 | `design-references.json` 항목 (`linked`) |
+| **1. Plan** | 슬롯 트리 + Atomic 목록 + 채우기 순서 | 채팅에 적은 목록 (코드 아님) |
+| **2. Layout scaffold** | 페이지에 **빈 슬롯만** 작성 | `data-slot` 이 붙은 페이지 파일 |
+| **3. Fill** | 슬롯을 atom → molecule → organism 으로 채움 | 컴포넌트 + 스토리 + 조립된 페이지 |
+
+> **`implement` 모드**: 2단계를 건너뛰고 페이지에 바로 내용물을 쓰면 쓰기 시점 체크가 거부한다.
+> 뼈대를 먼저 저장한 뒤 채워야 한다. 판정 기준은 페이지 파일의 `data-slot` 유무다.
+
 계층 정의와 경계 규칙은 `{{RULES_DIR}}/30-design-system` 에 있다.
 
 ## 절차
@@ -56,7 +67,18 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
    6. **목표: Figma와 최대한 가깝게** — 작은 단위로 반복해 충실도 유지
 
 {{/if}}
-1. **화면 분해**: 만들 화면을 계층으로 쪼개 목록을 먼저 적는다.
+### 1. Plan — 코드를 쓰기 전에 목록부터
+
+1. **슬롯 트리**: 화면을 위에서 아래로 구역(슬롯)으로 나눈다. 각 구역에 `data-slot` 이름을 정한다.
+
+   ```
+   OfficeDetailPage
+     ├ data-slot="header"    — 제목 + 액션 버튼
+     ├ data-slot="summary"   — 평점·배지 요약
+     └ data-slot="reviews"   — 리뷰 목록
+   ```
+
+2. **화면 분해**: 만들 화면을 계층으로 쪼개 목록을 먼저 적는다.
 
    ```
    OfficeDetailPage (page)
@@ -72,15 +94,46 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
 
    목록 없이 코드를 시작하지 않는다. 이 목록이 곧 작업 순서다.
 
-2. **재고 조사**: 목록의 각 항목이 `src/design-system/atoms|molecules|organisms/` 와
+3. **재고 조사**: 목록의 각 항목이 `src/design-system/atoms|molecules|organisms/` 와
    `src/components/` 에 이미 있는지 조회한다.
    - 있으면 그대로 쓴다. 비슷한 것이 있으면 variant/prop 추가를 우선 검토한다. 복제 금지.
-3. **Storybook 확인**: `.storybook/` 이 없으면 먼저 `/ds-init` 을 실행한다.
-4. **계층 판정**: 없는 것마다 위치를 정한다.
+4. **Storybook 확인**: `.storybook/` 이 없으면 먼저 `/ds-init` 을 실행한다.
+5. **계층 판정**: 없는 것마다 위치를 정한다.
    - 더 못 쪼개면 atom / atom 2~3개 조합이면 molecule / 의미 있는 블록이면 organism
    - 도메인 타입을 props로 받으면 `design-system/` 이 아니라 `src/components/{Domain}/`
    - 쿼리 훅·전역 스토어를 부르고 싶어지면 컴포넌트가 아니다 — 그 호출은 page로 올린다
-5. **아래에서 위로 작성**: atom을 전부 끝내고 molecule, 그 다음 organism.
+6. **채우기 순서 확정**: 어느 슬롯부터 채울지 정한다. 보통 위에서 아래로 (헤더 → 본문 → 하단).
+
+### 2. Layout scaffold — 빈 뼈대를 먼저 저장한다
+
+페이지 파일에 **슬롯만** 작성하고 저장한다. 이 단계에서 쓰는 것은:
+
+- 슬롯 요소와 `data-slot` 속성
+- 레이아웃 스타일만 (`display`, `grid`/`flex`, `gap`, 간격 토큰)
+- 필요하면 레이아웃 성격의 atom (예: `Stack`, `Container`)
+
+쓰지 않는 것: `src/components/` 및 `design-system/molecules|organisms` import, 실제 마크업, 문구, 데이터 훅.
+
+```tsx
+// src/pages/OfficeDetailPage.tsx — scaffold 단계
+import styles from './OfficeDetailPage.module.css'
+
+export function OfficeDetailPage() {
+    return (
+        <main className={styles.page}>
+            <section data-slot="header" className={styles.header} />
+            <section data-slot="summary" className={styles.summary} />
+            <section data-slot="reviews" className={styles.reviews} />
+        </main>
+    )
+}
+```
+
+뼈대를 저장한 뒤에 3단계로 넘어간다. 뼈대와 내용물을 한 번의 쓰기에 같이 넣으면 거부된다.
+
+### 3. Fill — 슬롯을 하나씩 채운다
+
+1. **아래에서 위로 작성**: atom을 전부 끝내고 molecule, 그 다음 organism.
    각 컴포넌트 폴더에:
    - `<Name>.tsx` — 토큰만 사용 (`tokens.css` 변수·`tokens.ts` 상수), 원시 색상값 금지.
      자기보다 위 계층 import 금지 (ESLint error)
@@ -103,15 +156,20 @@ UI 작업 지시를 받았을 때, 페이지 레이아웃에 착수하기 **전�
      - "기본 예제만 있고 실제 쓰이는 조합은 스토리에 없다"면 변형 검증이 안 된다
      - 새 화면을 만들 때 기존 컴포넌트의 variant/prop이 충분한지 스토리를 먼저 확인한다
      
-     **⚠️ Storybook ready: stories 없는 컴포넌트는 Write/Shell 게이트 + 커밋 게이트가 차단**
+     **⚠️ Storybook ready: stories 없는 컴포넌트는 쓰기 시점 체크 + 커밋 전 체크가 차단**
    - `index.ts` — 공개 API
-6. **검증**: 스토리 테스트와 stylelint, lint(계층 위반 검사) 통과 확인. UI 완성도(인터랙션
-   상태·트랜지션·그림자)는 정적 분석으로 못 잡으므로 `/ux-review`로 별도 확인한다.
-7. 이제 페이지를 쓴다. 페이지에는 훅 호출과 조립만 남는다 —
-   새 마크업·스타일이 필요해지면 5번으로 돌아간다.
+2. **슬롯 채우기**: 컴포넌트가 준비된 슬롯부터 순서대로 채운다. 한 번에 한 슬롯씩,
+   채울 때마다 디자인과 비교한다. `data-slot` 속성은 지우지 않고 그대로 둔다.
+   페이지에는 훅 호출과 조립만 남는다 — 새 마크업·스타일이 필요해지면 1번으로 돌아간다.
+
+### 4. 검증
+
+스토리 테스트와 stylelint, lint(계층 위반 검사) 통과 확인. UI 완성도(인터랙션
+상태·트랜지션·그림자)는 정적 분석으로 못 잡으므로 `/ux-review`로 별도 확인한다.
 
 ## 금지
 
+- **뼈대 없이 페이지에 내용물부터 쓰기** (`implement` 모드에서는 쓰기 시점에 거부된다)
 - 페이지 파일 안에 일회성 버튼·인풋 스타일 작성 (드리프트의 시작)
 - 계층 건너뛰기 — atom 없이 organism부터 만들기
 - atom/molecule 안에서 도메인 타입·쿼리 훅·전역 스토어 사용

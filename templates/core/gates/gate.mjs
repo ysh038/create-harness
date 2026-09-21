@@ -94,6 +94,22 @@ if (isGitCommit) {
         )
     }
 
+    // Layout-first 보조 경고 (0.6.0) — 커밋을 막지는 않는다.
+    // ui-prereq-check.mjs 는 design-system/inspire·implement 설치에만 있으므로 동적으로 불러온다.
+    try {
+        const { collectLayoutWarnings } = await import('./ui-prereq-check.mjs')
+        const config = JSON.parse(
+            readFileSync(path.join(projectRoot, '.harness', 'config.json'), 'utf-8'),
+        )
+        const stagedFiles = staged.split('\n').filter(Boolean)
+        const warnings = collectLayoutWarnings(projectRoot, config, stagedFiles)
+        for (const warning of warnings) {
+            process.stderr.write(`⚠️ layout-first: ${warning}\n`)
+        }
+    } catch {
+        // config/참조 파일을 못 읽으면 경고 생략 — 커밋은 그대로 진행
+    }
+
     const result = spawnSync(
         process.execPath,
         [path.join(gatesDir, 'run-checks.mjs')],

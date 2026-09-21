@@ -6,13 +6,19 @@
                 "hooks": [
                     {
                         "type": "command",
+                        "command": "\"$CLAUDE_PROJECT_DIR\"/.harness/gates/before-shell-gate.sh claude",
+                        "timeout": 600,
+                        "failClosed": true
+                    },
+                    {
+                        "type": "command",
                         "command": "\"$CLAUDE_PROJECT_DIR\"/.harness/gates/pre-commit-gate.sh claude",
                         "timeout": 600
                     }
                 ]
             },
             {
-                "matcher": "Write|StrReplace",
+                "matcher": "Write|Edit|MultiEdit|StrReplace|ApplyPatch",
                 "hooks": [
                     {
                         "type": "command",

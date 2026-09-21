@@ -47,6 +47,12 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 {{/if}}{{#if HAS_DESIGN_REFS}}- **Design ref enforcement**: inspire/implement 모드에서 페이지/화면 작성 시 design-references.json 항목 필요.
   * 항목 없으면 파일 쓰기가 차단되고, 먼저 디자인 참조를 물어보라는 메시지가 표시된다.
   * 읽기 실패한 참조(lastReadOk: false)로는 UI 작성 불가 — 다른 참조 제공 또는 명시적 waive 필요.
+- **Layout-first enforcement** (implement 모드 + `linked` 참조 페이지):
+  페이지는 **빈 뼈대를 먼저 저장한 뒤** 컴포넌트로 채운다.
+  * 뼈대 = 레이아웃 스타일 + `data-slot` 속성만. 내용물 import 없이.
+  * 뼈대(`data-slot`) 없는 페이지에 내용물(`src/components/` 또는 design-system molecule/organism import)을
+    쓰려고 하면 **쓰기 시점에 거부**된다. 뼈대와 내용물을 한 번에 쓰면 계속 거부되므로 나눠서 쓴다.
+  * 순서와 예시는 `/ds-add` 참고 (Read → Plan → Layout scaffold → Fill).
 {{/if}}
 
 ## 디자인 모드 및 코딩 스타일
@@ -132,6 +138,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
 | **Storybook ready: 새 design-system 컴포넌트를 stories 없이 커밋** | **각 컴포넌트 옆에 `<Name>.stories.tsx` 필수. Write/Shell 게이트 + 커밋 게이트가 차단** |
 {{/if}}{{#if HAS_DESIGN_REFS}}| **inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성** | **반드시 먼저** design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |
+| **implement 모드: 레이아웃 뼈대 없이 페이지에 내용물부터 작성** | 빈 슬롯(`data-slot`) 페이지를 먼저 저장한 뒤 채운다. 쓰기 시점에 거부된다 (`/ds-add` 참고) |
 | **implement 모드: 읽기 실패한 참조로 UI 작성** | 사용자가 제공한 참조를 읽을 수 없으면 **STOP**. 다른 Figma 노드 URL 또는 스크린샷 요청. `linked` 는 성공적으로 읽은 후에만 |
 {{/if}}| 테스트 단정문 약화로 통과시키기 | 검증의 의미가 사라진다 |
 
