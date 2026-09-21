@@ -7,13 +7,14 @@
  * Cursor의 preToolUse 훅으로 실행되어 UI 파일 쓰기 전에 다음을 체크한다:
  * 1. Storybook: pending/ready 상태인데 .storybook/ 없으면 deny
  * 2. Design ref: inspire/implement 모드에서 페이지 쓸 때 design-references.json 항목 필요
+ * 3. Layout-first: implement 모드에서 뼈대(data-slot) 없는 페이지에 알맹이 쓰기 차단 (0.6.0)
+ * 4. Stories pair: Storybook ready 시 새 DS 컴포넌트는 stories 필요
  *
  * 사용: pre-write-gate.mjs <cursor|claude>  (훅 입력 JSON은 stdin)
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { existsSync } from 'node:fs'
 import {
     isUiFile,
     isDesignSystemComponent,
@@ -21,6 +22,7 @@ import {
     checkStorybookPrereq,
     checkDesignRefPrereq,
     checkStoriesPair,
+    checkLayoutScaffold,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -34,7 +36,9 @@ const respond = (decision, userMsg, agentMsg) => {
                 hookSpecificOutput: {
                     hookEventName: 'PreToolUse',
                     permissionDecision: decision,
-                    permissionDecisionReason: userMsg ?? agentMsg ?? '',
+                    // Claude Code는 이 문자열을 에이전트에게 전달한다 — 다음 행동 안내가 담긴
+                    // agentMsg를 우선한다. 없을 때만 사용자용 짧은 사유로 대체한다.
+                    permissionDecisionReason: agentMsg ?? userMsg ?? '',
                 },
             }),
         )
@@ -62,7 +66,7 @@ try {
 
 // tool_name이 있으면 Write/StrReplace/Edit/ApplyPatch만 체크
 if (input.tool_name) {
-    const writeTools = ['Write', 'StrReplace', 'Edit', 'ApplyPatch']
+    const writeTools = ['Write', 'StrReplace', 'Edit', 'MultiEdit', 'ApplyPatch']
     if (!writeTools.includes(input.tool_name)) {
         // Shell, Read 등 다른 도구는 허용
         respond('allow')
@@ -81,6 +85,21 @@ const extractFilePath = (input) => {
     // StrReplace: path
     // Edit: path 또는 file_path 또는 target_file
     return toolInput.path || toolInput.file_path || toolInput.target_file || null
+}
+
+// 이번 쓰기로 들어갈 텍스트 추출 (layout-first 판정용)
+// Write: content(Claude) / contents(Cursor), Edit·StrReplace: new_string, MultiEdit: edits[].new_string
+const extractIncomingText = (input) => {
+    const toolInput = input.tool_input ?? input
+    if (!toolInput) return ''
+    if (typeof toolInput.content === 'string') return toolInput.content
+    if (typeof toolInput.contents === 'string') return toolInput.contents
+    if (typeof toolInput.new_string === 'string') return toolInput.new_string
+    if (Array.isArray(toolInput.edits)) {
+        return toolInput.edits.map((e) => e?.new_string ?? '').join('\n')
+    }
+    // 알 수 없는 형식 (ApplyPatch 등) — 전체를 보수적으로 검사
+    return JSON.stringify(toolInput)
 }
 
 const filePath = extractFilePath(input)
@@ -131,7 +150,13 @@ if (designRefCheck.deny) {
     respond('deny', designRefCheck.userMsg, designRefCheck.agentMsg)
 }
 
-// 3. Stories pair 체크 (Storybook ready + 새 DS 컴포넌트)
+// 3. Layout-first 체크 (implement 모드 페이지만)
+const layoutCheck = checkLayoutScaffold(projectRoot, config, relPath, extractIncomingText(input))
+if (layoutCheck.deny) {
+    respond('deny', layoutCheck.userMsg, layoutCheck.agentMsg)
+}
+
+// 4. Stories pair 체크 (Storybook ready + 새 DS 컴포넌트)
 if (isDesignSystemComponent(relPath)) {
     // Write로 새 파일 생성 중 (기존 파일 없음 → 새 파일)
     const absPath = path.resolve(filePath)

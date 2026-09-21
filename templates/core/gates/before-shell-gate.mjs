@@ -20,7 +20,7 @@
  *
  * 사용: before-shell-gate.mjs <cursor|claude>  (훅 입력 JSON은 stdin)
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -30,6 +30,7 @@ import {
     checkStorybookPrereq,
     checkDesignRefPrereq,
     checkStoriesPair,
+    checkLayoutScaffold,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -43,7 +44,9 @@ const respond = (decision, userMsg, agentMsg) => {
                 hookSpecificOutput: {
                     hookEventName: 'PreToolUse',
                     permissionDecision: decision,
-                    permissionDecisionReason: userMsg ?? agentMsg ?? '',
+                    // Claude Code는 이 문자열을 에이전트에게 전달한다 — 다음 행동 안내가 담긴
+                    // agentMsg를 우선한다. 없을 때만 사용자용 짧은 사유로 대체한다.
+                    permissionDecisionReason: agentMsg ?? userMsg ?? '',
                 },
             }),
         )
@@ -193,6 +196,12 @@ for (const targetPath of targetPaths) {
     const designRefCheck = checkDesignRefPrereq(projectRoot, config, relPath)
     if (designRefCheck.deny) {
         respond('deny', designRefCheck.userMsg, designRefCheck.agentMsg)
+    }
+
+    // Layout-first 체크 (implement 모드 페이지만) — heredoc 본문이 명령에 들어 있으므로 명령 전체를 검사
+    const layoutCheck = checkLayoutScaffold(projectRoot, config, relPath, command)
+    if (layoutCheck.deny) {
+        respond('deny', layoutCheck.userMsg, layoutCheck.agentMsg)
     }
 
     // Stories pair 체크 (DS 컴포넌트만, shell로 새 파일 쓰는 경우)

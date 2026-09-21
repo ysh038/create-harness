@@ -1796,3 +1796,86 @@ pending은 "설치 전"이라 유예했지만, ready는 "이미 설치됨"이므
 - npm publish (PR 병합 후, 수동)
 
 
+
+## 36. v0.6.0 — Layout-first: 페이지는 빈 슬롯 뼈대를 먼저 저장한 뒤 채운다
+
+### 배경
+
+`implement` 모드에서 에이전트가 페이지를 한 번의 쓰기로 완성하려는 패턴이 계속 나왔다.
+v0.5.7의 "섹션별 구현" 소프트 가이던스만으로는 바뀌지 않았다 — 문서로만 권고하면
+에이전트는 한 방에 끝내는 쪽을 택한다. 그 결과 디자인과 어긋난 큰 덩어리가 한 번에 들어오고,
+어느 구역이 틀렸는지 좁히기 어려웠다.
+
+### 결정
+
+쓰기 시점에 순서를 강제한다. 페이지 파일에 **빈 슬롯 뼈대**(`data-slot` 속성 + 레이아웃 스타일)가
+저장되어 있지 않으면, 그 페이지에 알맹이를 쓰는 작업을 거부한다.
+
+**판정 근거는 디스크에 있는 페이지 파일의 `data-slot` 유무다.** 추적용 필드(`layoutStatus`)를
+근거로 삼지 않는다 — 파일이 정본이고, 필드는 갱신을 잊으면 실제와 어긋나기 때문이다.
+
+**알맹이 정의**: `src/components/**` 또는 `design-system/molecules|organisms` import.
+atom·토큰·스타일 파일은 뼈대 단계에서도 허용한다 (`Stack` 같은 레이아웃 atom 때문).
+
+### 적용 범위 (반하드 — 조건을 좁혔다)
+
+거부하는 경우는 **네 조건을 모두** 만족할 때뿐이다:
+
+1. `mode === 'implement'`
+2. 페이지 파일 (`isPageFile`)
+3. design-references 항목이 `status: 'linked'`
+4. 디스크의 페이지에 `data-slot`도 없고 알맹이 import도 없음 + 이번 쓰기에 알맹이가 들어옴
+
+통과: free/inspire 모드, `waived`/`needed`/항목 없음, atom·molecule 단독 파일,
+이미 알맹이가 들어 있는 기존 페이지(brownfield), 뼈대만 쓰는 작업.
+
+뼈대와 알맹이를 한 번의 쓰기로 넣으면 거부된다 — 두 단계를 분리하는 것이 목적이다.
+
+### 함께 고친 기존 버그
+
+1. **`before-shell-gate.mjs`가 `existsSync`를 import하지 않고 사용** — 셸로 design-system
+   컴포넌트를 쓰면 stories pair 체크 경로에서 ReferenceError가 났다. 회귀 테스트 추가.
+2. **`claude-settings.json` matcher가 `Write|StrReplace`뿐** — Claude Code의 Edit/MultiEdit는
+   쓰기 시점 체크를 전혀 타지 않았다. 채우기 단계는 대부분 Edit이므로, 안 고치면 이번 체크가
+   무력화된다. `Write|Edit|MultiEdit|StrReplace|ApplyPatch` 로 변경.
+3. **Claude Code에 셸 체크가 연결되어 있지 않았다** — `Bash` matcher에 `pre-commit-gate.sh`만
+   있었다. Cursor는 둘 다 연결되어 있었다. `before-shell-gate.sh claude` 추가.
+4. **`permissionDecisionReason`이 `userMsg`를 우선** — Claude Code는 이 문자열을 에이전트에게
+   전달하는데, 사용자용 짧은 사유만 가고 다음 행동 안내(`agentMsg`)가 버려졌다. 에이전트가
+   "왜 막혔는지"만 알고 "뭘 해야 하는지"는 몰라 같은 시도를 반복한다. `agentMsg` 우선으로 변경.
+
+### 커밋 시점은 경고만
+
+`gate.mjs`가 커밋 시 staged 페이지 중 뼈대 없이 채워진 것을 stderr로 알린다. 커밋을 막지 않는다.
+하네스 설치 전부터 있던 페이지까지 커밋을 막으면 마찰이 과하기 때문이다.
+`ui-prereq-check.mjs`는 조건부 설치 파일이므로 `gate.mjs`에서 **동적 import**로 불러온다
+(정적 import 시 free 모드 + design-system 미선택 설치에서 커밋 훅이 깨진다).
+
+### 문서
+
+`/ds-add`를 **Read → Plan → Layout scaffold → Fill** 네 단계로 재구성했다.
+scaffold 단계의 코드 예시를 넣어 "무엇을 쓰고 무엇을 쓰지 않는지"를 못 박았다.
+
+### 변경 파일
+
+- `templates/core/gates/ui-prereq-check.mjs`: `checkLayoutScaffold`, `hasSubstanceImport`,
+  `SLOT_MARKER`, `findDesignRefEntry`, `collectLayoutWarnings` 추가
+- `templates/core/gates/pre-write-gate.mjs`: 체크 연결 + `extractIncomingText` + agentMsg 우선
+- `templates/core/gates/before-shell-gate.mjs`: 체크 연결 + `existsSync` import + agentMsg 우선
+- `templates/core/gates/gate.mjs`: 커밋 시 경고 (동적 import)
+- `templates/core/gates/claude-settings.json`: matcher 수정 + 셸 체크 연결
+- `templates/core/workflows/ds-add.md`: 4단계 재구성
+- `templates/core/workflows/ds-ref.md`: `layoutStatus`는 추적용이며 판정 근거가 아님을 명시
+- `templates/core/AGENTS.md`: layout-first 포인터 + 금지 항목
+- `test/layout-first.test.ts`: 신규 15 테스트
+- `package.json`: 0.5.7 → **0.6.0**
+
+### 버전
+
+`package.json` → **0.6.0** (minor — 새 쓰기 시점 정책 추가, 기존 설치의 훅 설정 변경 포함)
+
+### 완료 조건
+
+- `npm run check` 통과 (typecheck → build → test)
+- PR 생성 (main 대상)
+- npm publish (PR 병합 후, 수동)
