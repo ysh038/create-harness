@@ -231,8 +231,8 @@
 - [x] test/layout-first.test.ts: 15 테스트 추가
 - [x] package.json: 버전 0.6.0
 - [x] DECISIONS.md: #36 기록
-- [ ] npm run check 통과 (typecheck → build → test)
-- [ ] PR 생성 (main 대상)
+- [x] npm run check 통과 (typecheck → build → test) — 103/103 tests passed
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/18
 - [ ] npm publish (PR 병합 후)
 
 ## 아이디어 (버전 미정)
