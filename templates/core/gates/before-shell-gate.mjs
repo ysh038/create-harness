@@ -122,8 +122,8 @@ if (/^(node|npx|pnpx|bunx)\s+/.test(command)) {
         // (실제 파일 경로를 정확히 파싱할 수 없으므로 보수적으로 차단)
         respond(
             'deny',
-            'Shell 명령에서 UI 파일 쓰기를 감지했습니다. Write/StrReplace 도구를 사용하세요.',
-            '⚠️ node/npx 명령에 writeFileSync 또는 UI 경로 키워드가 포함되어 있어 차단되었습니다. UI 파일은 Write/StrReplace 도구를 사용하여 작성하세요.',
+            'Shell 명령에서 UI 파일 쓰기를 감지했습니다. 파일 쓰기 도구(Write/Edit)를 사용하세요.',
+            '⚠️ node/npx 명령에 writeFileSync 또는 UI 경로 키워드가 포함되어 있어 차단되었습니다. UI 파일은 파일 쓰기 도구(Write/Edit)를 사용하여 작성하세요.',
         )
     }
     respond('allow')

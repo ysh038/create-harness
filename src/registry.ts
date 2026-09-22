@@ -185,7 +185,7 @@ const buildRuleActions = (
             }
         })
 
-const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship', 'harness-setup']
+const BASE_WORKFLOWS = ['spec', 'impl', 'verify', 'ship', 'qa', 'harness-setup']
 // ds-init·ds-add는 Claude에서 design-system 스킬 하나로 합쳐진다 (설치·추가는 한 흐름)
 const DESIGN_SYSTEM_SETUP_WORKFLOWS = ['ds-init', 'ds-add']
 // ux-review는 목적이 달라(진행 중인 UI 품질 리뷰) 독립 스킬로 둔다
@@ -399,6 +399,47 @@ const buildGateActions = (
     return actions
 }
 
+/**
+ * QA 서브에이전트 (1.0.0) — /qa 가 부르는 "코드를 모르는" 테스터.
+ * - Claude 선택 시: .claude/agents/qa-tester.md 원본 그대로 (브라우저 도구만 허용, CLAUDE.md 생략).
+ *   Cursor도 .claude/agents/ 를 읽으므로 둘 다 선택하면 이 파일 하나를 공유한다.
+ * - Cursor만 선택 시: .cursor/agents/qa-tester.md — Cursor는 도구를 골라 제한할 수 없어
+ *   readonly 로 수정만 막고, 코드를 읽지 않는 것은 지시문으로 요구한다.
+ */
+const CURSOR_QA_NOTICE = `> **Cursor에서 실행 중**: 이 에이전트는 파일 읽기·검색·터미널 도구를 물려받지만 **쓰지 않는다.**
+> 브라우저 도구만 쓴다. 코드를 봤다면 그 실행 결과는 신뢰할 수 없다.
+
+`
+
+const buildAgentActions = (
+    options: IScaffoldOptions,
+    vars: Record<string, string>,
+): IFileAction[] => {
+    const raw = loadTemplate('core/agents/qa-tester.md', vars)
+    if (options.agents.includes('claude')) {
+        return [{ dest: '.claude/agents/qa-tester.md', content: raw, module: 'core' }]
+    }
+    if (options.agents.includes('cursor')) {
+        const { meta, body } = parseFrontmatter(raw)
+        return [
+            {
+                dest: '.cursor/agents/qa-tester.md',
+                content:
+                    serializeFrontmatter({
+                        name: 'qa-tester',
+                        description: meta['description'] ?? '',
+                        model: 'inherit',
+                        readonly: 'true',
+                    }) +
+                    CURSOR_QA_NOTICE +
+                    body,
+                module: 'core',
+            },
+        ]
+    }
+    return []
+}
+
 const buildDocActions = (vars: Record<string, string>): IFileAction[] => [
     ...['architecture.md', 'decisions.md', 'product-spec.md', 'task-log.md'].map(
         (file) => ({
@@ -599,6 +640,7 @@ export const buildPlan = (
         },
         ...buildRuleActions(options, vars),
         ...buildWorkflowActions(options, vars),
+        ...buildAgentActions(options, vars),
         ...buildGateActions(options, vars),
         ...buildDocActions(vars),
         ...buildModuleActions(detected, options, vars),

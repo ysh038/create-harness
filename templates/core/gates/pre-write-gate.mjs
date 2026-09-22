@@ -2,9 +2,9 @@
 /* eslint-disable */
 // ↑ Node 인프라 스크립트 — 브라우저 전용 eslint 설정(no-undef: process 등)에 걸리지 않게 한다.
 /**
- * pre-write-gate.mjs — Write/StrReplace/Edit/ApplyPatch 도구 사용 시점 검증
+ * pre-write-gate.mjs — 파일 쓰기 도구 사용 시점 검증
  *
- * Cursor의 preToolUse 훅으로 실행되어 UI 파일 쓰기 전에 다음을 체크한다:
+ * Cursor preToolUse / Claude Code PreToolUse 훅으로 실행되어 UI 파일 쓰기 전에 다음을 체크한다:
  * 1. Storybook: pending/ready 상태인데 .storybook/ 없으면 deny
  * 2. Design ref: inspire/implement 모드에서 페이지 쓸 때 design-references.json 항목 필요
  * 3. Layout-first: implement 모드에서 뼈대(data-slot) 없는 페이지에 알맹이 쓰기 차단 (0.6.0)
@@ -69,7 +69,7 @@ try {
     respond('allow')
 }
 
-// tool_name이 있으면 Write/StrReplace/Edit/ApplyPatch만 체크
+// tool_name이 있으면 파일 쓰기 도구만 체크
 if (input.tool_name) {
     const writeTools = ['Write', 'StrReplace', 'Edit', 'MultiEdit', 'ApplyPatch']
     if (!writeTools.includes(input.tool_name)) {

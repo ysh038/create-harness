@@ -54,6 +54,8 @@ const hasCssModules = (targetDir: string): boolean => {
     return walk(srcDir)
 }
 
+const TOKEN_DEFINITION_FILE = 'src/design-system/tokens.css'
+
 /** 선언부의 색상 원시값 — 토큰 강제를 곧바로 error로 켰을 때 걸릴 것들 */
 const RAW_COLOR_PATTERN =
     /(?:color|fill|stroke|background|border-color|outline-color)[^;{}]*:[^;{}]*(#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\()/
@@ -147,11 +149,13 @@ const findCssFilesWithRawColor = (targetDir: string): string[] => {
                 walk(full)
             } else if (entry.name.endsWith('.css')) {
                 scanned += 1
+                const relPath = path.relative(targetDir, full).split(path.sep).join('/')
+                // 토큰 정의 파일은 원시값이 들어가는 유일한 자리다 — 재실행(업그레이드) 때
+                // 하네스가 설치한 이 파일을 기존 위반으로 잡아 baseline 에 올리지 않는다 (1.0.0)
+                if (relPath === TOKEN_DEFINITION_FILE) continue
                 try {
                     if (RAW_COLOR_PATTERN.test(readFileSync(full, 'utf-8'))) {
-                        found.push(
-                            path.relative(targetDir, full).split(path.sep).join('/'),
-                        )
+                        found.push(relPath)
                     }
                 } catch {
                     // 읽을 수 없는 파일은 없는 것으로 취급

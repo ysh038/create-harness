@@ -39,12 +39,13 @@ afterEach(() => {
 })
 
 const runGate = (input: object, tool = 'cursor'): { permission: string; user_message?: string; agent_message?: string } => {
-    const inputJson = JSON.stringify(input)
+    // stdin 으로 직접 넘긴다 — 셸 echo 는 입력에 작은따옴표가 들어가면 깨진다
     try {
-        const output = execSync(
-            `echo '${inputJson}' | node "${gateScript}" ${tool}`,
-            { encoding: 'utf-8', cwd: testDir }
-        )
+        const output = execSync(`node "${gateScript}" ${tool}`, {
+            encoding: 'utf-8',
+            cwd: testDir,
+            input: JSON.stringify(input),
+        })
         return JSON.parse(output.trim())
     } catch (error: any) {
         // exit 0이어도 stdout에 JSON이 있으면 성공
@@ -68,12 +69,12 @@ describe('before-shell-gate.mjs — Shell bypass 차단', () => {
 
     const runShellGate = (command: string, tool = 'cursor'): { permission: string; user_message?: string; agent_message?: string } => {
         const input = { tool_input: { command, cwd: testDir }, command, cwd: testDir }
-        const inputJson = JSON.stringify(input)
         try {
-            const output = execSync(
-                `echo '${inputJson}' | node "${shellGateScript}" ${tool}`,
-                { encoding: 'utf-8', cwd: testDir }
-            )
+            const output = execSync(`node "${shellGateScript}" ${tool}`, {
+                encoding: 'utf-8',
+                cwd: testDir,
+                input: JSON.stringify(input),
+            })
             return JSON.parse(output.trim())
         } catch (error: any) {
             if (error.stdout) {
@@ -120,7 +121,7 @@ describe('before-shell-gate.mjs — Shell bypass 차단', () => {
         const result = runShellGate('node -e fs.writeFileSync src/pages/LoginPage.tsx content')
         
         expect(result.permission).toBe('deny')
-        expect(result.agent_message).toContain('Write/StrReplace')
+        expect(result.agent_message).toContain('Write/Edit')
     })
 
     it('git commit은 허용 (pre-commit-gate가 별도 실행)', () => {

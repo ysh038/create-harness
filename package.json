@@ -1,6 +1,6 @@
 {
     "name": "create-harness-cli",
-    "version": "0.7.0",
+    "version": "1.0.0",
     "description": "Scaffold an AI coding-agent harness (conventions, verification gates, workflows) onto an existing project \u2014 for Cursor and Claude Code.",
     "type": "module",
     "bin": {

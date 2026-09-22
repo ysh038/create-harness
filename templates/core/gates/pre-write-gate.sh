@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write/StrReplace/Edit 도구 사용 시점 게이트 진입점
+# 파일 쓰기 도구(Write/Edit/MultiEdit/StrReplace/ApplyPatch) 사용 시점 검사 진입점
 set -euo pipefail
 
 GATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

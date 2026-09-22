@@ -2,10 +2,12 @@
 
 exports[`buildPlan > 생성 트리가 스냅샷과 일치한다 (전체 모듈, cursor+claude) 1`] = `
 [
+  ".claude/agents/qa-tester.md",
   ".claude/settings.json",
   ".claude/skills/design-system/SKILL.md",
   ".claude/skills/harness-setup/SKILL.md",
   ".claude/skills/impl/SKILL.md",
+  ".claude/skills/qa/SKILL.md",
   ".claude/skills/ship/SKILL.md",
   ".claude/skills/spec/SKILL.md",
   ".claude/skills/ux-review/SKILL.md",
@@ -14,6 +16,7 @@ exports[`buildPlan > 생성 트리가 스냅샷과 일치한다 (전체 모듈, 
   ".cursor/commands/ds-init.md",
   ".cursor/commands/harness-setup.md",
   ".cursor/commands/impl.md",
+  ".cursor/commands/qa.md",
   ".cursor/commands/ship.md",
   ".cursor/commands/spec.md",
   ".cursor/commands/ux-review.md",

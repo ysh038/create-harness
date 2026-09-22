@@ -29,15 +29,17 @@ Requires Node.js 20+.
 
 - **`AGENTS.md`** — short source of truth for every agent (`CLAUDE.md` imports it), includes design mode + coding style preferences
 - **Cursor rules / Claude skills** — architecture, data fetching, design system, testing, auth
-- **Workflows** — `/spec` → `/impl` → `/verify` → `/ship`, plus `/ds-init`, `/ds-add`, `/ux-review`, `/ds-ref` when the design-system module is on
+- **Workflows** — `/spec` → `/impl` → `/verify` → `/ship`, `/qa`, plus `/ds-init`, `/ds-add`, `/ux-review`, `/ds-ref` when the design-system module is on
+- **Blind QA agent** — `/qa <goal>` hands one user goal to a `qa-tester` subagent that knows nothing about the code (Claude Code: browser tools only, no file access, no `CLAUDE.md`). It uses the running app like a first-time user and reports blockers, confusion, missing feedback, accessibility signals, and console/network errors. Only confirmed bugs become tests — written while the bug still exists, so they start red
 - **Design reference map** (inspire/implement modes) — agent-maintained Figma link registry, prevents free redesign when `implement` mode is set
 - **Coding style config** — componentDeclaration (function/arrow), export (default/named), styling (css-modules/tailwind) stored in config, enforced by agents
-- **Commit gate** — shared script wired to Cursor `beforeShellExecution` and Claude `PreToolUse` (blocks failed checks, staged `.env`, `--no-verify`, force push)
+- **Write-time checks** — Cursor `preToolUse` / Claude `PreToolUse` on every write tool and shell write: Storybook prerequisite, design reference, layout-first scaffold (implement mode), inline styles in pages, stories for new components
+- **Commit gate** — shared script wired to Cursor `beforeShellExecution` and Claude `PreToolUse` (blocks failed checks, staged `.env`, `--no-verify`, force push; warns on structure drift — bloated pages, bloated atoms, look-alike components)
 - **Reference code** — axios instance, `ProtectedRoute`, TanStack Query 3-layer example, Zustand store (compile-ready, not prose)
 - **Lint enforcement** — naming, public API boundaries, Atomic layer imports (early page raw JSX ban), color tokens via stylelint
 - **Brownfield baselines** — existing violations (raw colors, raw page JSX) grandfathered as warnings; new code stays strict
 
-Existing files are never overwritten. Conflicts land under `.harness/incoming/`. Every write is recorded in `.harness/manifest.json`.
+Files you wrote are never overwritten. Conflicts land under `.harness/incoming/`. Every write is recorded in `.harness/manifest.json`.
 
 ## Options
 
@@ -99,6 +101,41 @@ Core (rules, workflows, gates, docs) always installs. Code-generating modules de
 | `lint` | ESLint flat config + TypeScript | legacy `.eslintrc`, JS-only |
 
 Use `--modules` to force inclusion. Dropping a module also drops the rules and workflows that depend on it.
+
+## Upgrading
+
+Re-run the CLI in the same project with the same answers (flags or `--config`):
+
+```bash
+npx create-harness-cli@latest . --config harness.config.json
+```
+
+- **Harness files you never touched** (hash matches `.harness/manifest.json`) are replaced with the new version — shown as `↻`.
+- **Files you edited** are left alone; the new version goes to `.harness/incoming/<path>.incoming` for you to diff and merge.
+- **Files that existed before the harness** (e.g. your own `AGENTS.md`) are never replaced.
+
+### From 0.x to 1.0
+
+- **Claude Code permission prompts come back.** Before 0.7.0, the hook scripts returned an explicit `allow`, which silently skipped your permission prompts for every shell command and write. They now stay silent on pass, so your normal permission settings apply again.
+- **`.claude/settings.json` hooks changed** — writes via `Edit`/`MultiEdit` and shell writes are now checked. If you customized this file, merge the `hooks` block from `.harness/incoming/.claude/settings.json.incoming`.
+- **New files**: `/qa` workflow, `qa-tester` agent (`.claude/agents/` or `.cursor/agents/`), `.harness/gates/structure-check.mjs` (design-system module).
+- Installs from before 1.0 upgrade cleanly only for files still matching their recorded hash; anything you edited lands in `incoming`.
+
+## Stability (1.0+)
+
+Semver applies to what you depend on. Breaking any of these means a new major version:
+
+| Public (stable) | |
+|---|---|
+| CLI | flags and `--config` keys listed above |
+| `.harness/config.json` | `checks`, `storybook`, `mode`, `fidelity`, `style`, `lang`, and the optional `structure` / `qa` keys |
+| `.harness/design-references.json` | entry shape: `id`, `kind`, `codePath`, `ref`, `status`, `lastReadOk` |
+| Installed locations | `AGENTS.md`, `CLAUDE.md`, `.cursor/rules|commands|agents/`, `.claude/skills|agents/`, `.claude/settings.json`, `.harness/gates/`, `docs/` |
+| Workflow names | `/spec` `/impl` `/verify` `/ship` `/qa` `/ds-init` `/ds-add` `/ux-review` `/ds-ref` |
+| What blocks | the write-time and commit rules listed in the installed `AGENTS.md`. **New blocking rules ship only in a major version** — in minor versions, new checks arrive as warnings |
+| Upgrade behavior | untouched harness files are replaced, edited files go to `incoming` |
+
+**Internal — may change in any minor version:** function names and internals of `.harness/gates/*.mjs`, message wording, warning heuristics and their default thresholds, workflow prose, template wording.
 
 ## Opinions (short)
 
