@@ -248,7 +248,7 @@
 - [x] package.json: 버전 0.7.0
 - [x] DECISIONS.md: #37 기록
 - [x] npm run check 통과 — 134/134 tests passed
-- [ ] PR 생성 (main 대상)
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/19
 - [ ] npm publish (PR 병합 후)
 
 ## 아이디어 (버전 미정)
