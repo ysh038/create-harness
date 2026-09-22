@@ -97,6 +97,8 @@ UI 작업 지시를 받았을 때 따르는 절차다. 큰 흐름은 네 단계�
 3. **재고 조사**: 목록의 각 항목이 `src/design-system/atoms|molecules|organisms/` 와
    `src/components/` 에 이미 있는지 조회한다.
    - 있으면 그대로 쓴다. 비슷한 것이 있으면 variant/prop 추가를 우선 검토한다. 복제 금지.
+   - 이름이 달라도 역할이 같을 수 있다 (`Badge` / `Tag` / `Chip`). 이름보다 **생김새와 역할**로 찾는다.
+     커밋 시 이름이 비슷한 새 부품은 경고되지만, 이름이 전혀 다르면 못 잡는다.
 4. **Storybook 확인**: `.storybook/` 이 없으면 먼저 `/ds-init` 을 실행한다.
 5. **계층 판정**: 없는 것마다 위치를 정한다.
    - 더 못 쪼개면 atom / atom 2~3개 조합이면 molecule / 의미 있는 블록이면 organism
@@ -170,7 +172,9 @@ export function OfficeDetailPage() {
 ## 금지
 
 - **뼈대 없이 페이지에 내용물부터 쓰기** (`implement` 모드에서는 쓰기 시점에 거부된다)
-- 페이지 파일 안에 일회성 버튼·인풋 스타일 작성 (드리프트의 시작)
+- 페이지 파일 안에 일회성 버튼·인풋 스타일 작성 (드리프트의 시작) — 인라인 스타일은 쓰기 시점에 거부,
+  원시 컨트롤·기본 태그 증가는 커밋 시 경고
+- atom에 역할을 계속 덧붙이기 — 다른 atom을 조합하거나 props가 8개를 넘으면 molecule로 올린다 (커밋 시 경고)
 - 계층 건너뛰기 — atom 없이 organism부터 만들기
 - atom/molecule 안에서 도메인 타입·쿼리 훅·전역 스토어 사용
 - **Storybook ready: 스토리 없는 컴포넌트 (Write/Shell 게이트 + 커밋 게이트가 차단)**

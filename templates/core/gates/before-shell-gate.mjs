@@ -31,6 +31,7 @@ import {
     checkDesignRefPrereq,
     checkStoriesPair,
     checkLayoutScaffold,
+    checkPageInlineStyle,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -39,6 +40,9 @@ const harnessRoot = path.resolve(gatesDir, '..')
 
 const respond = (decision, userMsg, agentMsg) => {
     if (tool === 'claude') {
+        // 통과 시에는 아무것도 출력하지 않는다 — 명시적 'allow'는 사용자의 권한 확인을
+        // 건너뛰게 만든다. 출력이 없으면 Claude Code의 원래 권한 흐름을 그대로 따른다. (0.7.0)
+        if (decision === 'allow') process.exit(0)
         console.log(
             JSON.stringify({
                 hookSpecificOutput: {
@@ -204,9 +208,15 @@ for (const targetPath of targetPaths) {
         respond('deny', layoutCheck.userMsg, layoutCheck.agentMsg)
     }
 
+    // 페이지 인라인 스타일 체크 (0.7.0) — 셸 쓰기는 파일 전체를 덮어쓰므로 기존 파일과 비교
+    const existing = existsSync(absPath) ? readFileSync(absPath, 'utf-8') : ''
+    const inlineStyleCheck = checkPageInlineStyle(projectRoot, relPath, command, existing)
+    if (inlineStyleCheck.deny) {
+        respond('deny', inlineStyleCheck.userMsg, inlineStyleCheck.agentMsg)
+    }
+
     // Stories pair 체크 (DS 컴포넌트만, shell로 새 파일 쓰는 경우)
     if (isDesignSystemComponent(relPath)) {
-        const absPath = path.resolve(cwd, targetPath)
         const isNewFile = !existsSync(absPath)
         
         const storiesCheck = checkStoriesPair(projectRoot, config, relPath, isNewFile)

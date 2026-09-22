@@ -8,6 +8,7 @@
  * 정책:
  *  - `git commit` 감지 시 → --no-verify 거부, .env 스테이징 거부, checks 실패 시 거부
  *  - `git push --force`/-f 거부 (--force-with-lease 는 허용)
+ *  - 통과 시 layout-first·구조 흐트러짐 경고가 있으면 전달 (차단 안 함, 0.6.0/0.7.0)
  *
  * 사용: gate.mjs <cursor|claude>  (훅 입력 JSON은 stdin)
  */
@@ -22,6 +23,9 @@ const projectRoot = path.resolve(gatesDir, '..', '..')
 
 const respond = (decision, reason) => {
     if (tool === 'claude') {
+        // 통과 시에는 아무것도 출력하지 않는다 — 명시적 'allow'는 사용자의 권한 확인을
+        // 건너뛰게 만든다. 출력이 없으면 Claude Code의 원래 권한 흐름을 그대로 따른다. (0.7.0)
+        if (decision === 'allow') process.exit(0)
         console.log(
             JSON.stringify({
                 hookSpecificOutput: {
@@ -35,9 +39,40 @@ const respond = (decision, reason) => {
         console.log(
             JSON.stringify(
                 decision === 'deny'
-                    ? { permission: 'deny', userMessage: reason, agentMessage: reason }
+                    ? { permission: 'deny', user_message: reason, agent_message: reason }
                     : { permission: 'allow' },
             ),
+        )
+    }
+    process.exit(0)
+}
+
+/**
+ * 커밋은 진행시키되 경고를 전달한다 (0.7.0)
+ * - Claude Code: stderr는 exit 0에서 아무에게도 안 보인다. additionalContext(에이전트) +
+ *   systemMessage(사용자)로 보내고, permissionDecision은 비워 원래 권한 흐름을 따른다.
+ * - Cursor: 통과 응답에 메시지를 붙이는 필드가 없다. 'ask'로 사용자에게 경고를 보여주고
+ *   진행 여부를 맡긴다.
+ */
+const respondWithWarnings = (warnings) => {
+    const text = `커밋 전 구조 점검 경고 ${warnings.length}건 (커밋은 막지 않음):\n${warnings.map((w) => `- ${w}`).join('\n')}`
+    if (tool === 'claude') {
+        console.log(
+            JSON.stringify({
+                systemMessage: text,
+                hookSpecificOutput: {
+                    hookEventName: 'PreToolUse',
+                    additionalContext: `${text}\n\n이번 커밋은 진행해도 되지만, 사용자에게 위 경고를 알리고 정리할지 물어보세요.`,
+                },
+            }),
+        )
+    } else {
+        console.log(
+            JSON.stringify({
+                permission: 'ask',
+                user_message: `${text}\n\n그대로 커밋하려면 승인하세요.`,
+                agent_message: `${text}\n\n사용자에게 위 경고를 알리고 정리할지 물어보세요.`,
+            }),
         )
     }
     process.exit(0)
@@ -94,20 +129,30 @@ if (isGitCommit) {
         )
     }
 
-    // Layout-first 보조 경고 (0.6.0) — 커밋을 막지는 않는다.
-    // ui-prereq-check.mjs 는 design-system/inspire·implement 설치에만 있으므로 동적으로 불러온다.
+    // 보조 경고 — 커밋을 막지는 않는다.
+    // 0.6.0 layout-first + 0.7.0 구조 흐트러짐(페이지 비대화·atom 비대화·부품 중복).
+    // 두 모듈은 조건부 설치 파일이므로 동적으로 불러오고, 없으면 해당 경고만 생략한다.
+    const warnings = []
+    let config = {}
     try {
-        const { collectLayoutWarnings } = await import('./ui-prereq-check.mjs')
-        const config = JSON.parse(
+        config = JSON.parse(
             readFileSync(path.join(projectRoot, '.harness', 'config.json'), 'utf-8'),
         )
-        const stagedFiles = staged.split('\n').filter(Boolean)
-        const warnings = collectLayoutWarnings(projectRoot, config, stagedFiles)
-        for (const warning of warnings) {
-            process.stderr.write(`⚠️ layout-first: ${warning}\n`)
-        }
     } catch {
-        // config/참조 파일을 못 읽으면 경고 생략 — 커밋은 그대로 진행
+        // config를 못 읽으면 기본값으로 진행
+    }
+    const stagedFiles = staged.split('\n').filter(Boolean)
+    try {
+        const { collectLayoutWarnings } = await import('./ui-prereq-check.mjs')
+        warnings.push(...collectLayoutWarnings(projectRoot, config, stagedFiles))
+    } catch {
+        // 모듈 없음 — 생략
+    }
+    try {
+        const { collectStagedStructureWarnings } = await import('./structure-check.mjs')
+        warnings.push(...collectStagedStructureWarnings(projectRoot, config))
+    } catch {
+        // 모듈 없음 — 생략
     }
 
     const result = spawnSync(
@@ -121,10 +166,16 @@ if (isGitCommit) {
             .filter(Boolean)
             .slice(-15)
             .join('\n')
+        const warningText =
+            warnings.length > 0 ? `\n\n구조 점검 경고:\n${warnings.map((w) => `- ${w}`).join('\n')}` : ''
         respond(
             'deny',
-            `커밋 전 검증(checks)이 실패했습니다. 고친 뒤 다시 커밋하세요.\n${tail}`,
+            `커밋 전 검증(checks)이 실패했습니다. 고친 뒤 다시 커밋하세요.\n${tail}${warningText}`,
         )
+    }
+
+    if (warnings.length > 0) {
+        respondWithWarnings(warnings)
     }
 }
 

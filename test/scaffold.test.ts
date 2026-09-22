@@ -438,6 +438,28 @@ describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () =
         ).toBe(true)
     })
 
+    it('structure-check.mjs는 design-system 모듈이 있을 때만 생성한다 (0.7.0)', () => {
+        const hasStructureCheck = (modules: IScaffoldOptions['modules']) =>
+            buildPlan(fakeDetect(), { ...fullOptions('/tmp/fake'), mode: 'implement', modules }).some(
+                (action) => action.dest === '.harness/gates/structure-check.mjs',
+            )
+        expect(hasStructureCheck(['design-system', 'lint'])).toBe(true)
+        expect(hasStructureCheck(['lint'])).toBe(false)
+    })
+
+    it('Claude 설정은 Edit/MultiEdit와 셸 경로에도 쓰기 시점 검사를 연결한다', () => {
+        const plan = buildPlan(fakeDetect(), fullOptions('/tmp/fake'))
+        const settings = plan.find((action) => action.dest === '.claude/settings.json')
+        const hooks = JSON.parse(settings!.content).hooks.PreToolUse as Array<{
+            matcher: string
+            hooks: Array<{ command: string }>
+        }>
+        const writeHook = hooks.find((h) => h.hooks.some((c) => c.command.includes('pre-write-gate')))
+        const bashHook = hooks.find((h) => h.matcher === 'Bash')
+        expect(writeHook!.matcher.split('|')).toEqual(expect.arrayContaining(['Write', 'Edit', 'MultiEdit']))
+        expect(bashHook!.hooks.some((c) => c.command.includes('before-shell-gate'))).toBe(true)
+    })
+
     it('free 모드에서 design-system 모듈 없으면 pre-write-gate를 생성하지 않는다', () => {
         const plan = buildPlan(fakeDetect(), {
             ...fullOptions('/tmp/fake'),

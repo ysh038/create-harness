@@ -373,3 +373,48 @@ export function collectLayoutWarnings(projectRoot, config, relPaths) {
     }
     return warnings
 }
+
+/**
+ * 인라인 스타일 개수 (0.7.0)
+ * CSS 변수만 넘기는 경우(style={{ '--progress': value }})는 동적 값 전달이라 세지 않는다.
+ */
+const INLINE_STYLE = /\bstyle=\{\{([\s\S]*?)\}\}/g
+const STYLE_KEY = /(['"]?)([\w-]+)\1\s*:/g
+
+export function countInlineStyles(text) {
+    if (!text) return 0
+    let count = 0
+    for (const match of text.matchAll(INLINE_STYLE)) {
+        const keys = [...match[1].matchAll(STYLE_KEY)].map((k) => k[2])
+        if (keys.length > 0 && keys.every((key) => key.startsWith('--'))) continue
+        count++
+    }
+    return count
+}
+
+/**
+ * 페이지 인라인 스타일 체크 (0.7.0) — design-system이 있는 프로젝트에서 페이지에
+ * 인라인 스타일을 새로 추가하면 거부한다. 기존 인라인 스타일은 건드리지 않는다
+ * (이번 쓰기로 개수가 늘어날 때만 거부).
+ *
+ * @param incomingText 이번 쓰기로 들어갈 텍스트
+ * @param replacedText 이번 쓰기로 사라질 텍스트 (Edit old_string, Write/shell은 기존 파일 전체)
+ * @returns {allow: true} | {deny: true, userMsg, agentMsg}
+ */
+export function checkPageInlineStyle(projectRoot, relPath, incomingText, replacedText) {
+    if (!isPageFile(relPath)) {
+        return { allow: true }
+    }
+    if (!existsSync(path.join(projectRoot, 'src', 'design-system'))) {
+        return { allow: true }
+    }
+    if (countInlineStyles(incomingText) <= countInlineStyles(replacedText)) {
+        return { allow: true }
+    }
+
+    return {
+        deny: true,
+        userMsg: `${relPath}: 페이지 파일에 인라인 스타일을 추가할 수 없습니다. 스타일은 컴포넌트나 페이지 레이아웃 CSS로 옮기세요.`,
+        agentMsg: `⚠️ ${relPath} 에 인라인 스타일(style={{...}})을 새로 넣으려고 합니다. 페이지에는 훅 호출과 조립만 남깁니다.\n\n대신:\n- 꾸밈(색·테두리·그림자·글꼴)이 필요하면 → design-system에 부품을 만들거나 기존 부품의 variant/prop을 늘린다 (/ds-add)\n- 배치(간격·정렬)만 필요하면 → 페이지 레이아웃 CSS에 토큰으로 작성한다\n- 동적 값 전달이 목적이면 → CSS 변수만 넘긴다: style={{ '--progress': value }}`,
+    }
+}
