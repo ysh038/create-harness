@@ -190,3 +190,20 @@ atom에 도메인이 섞이면 그 atom을 쓰는 화면 전부가 오염된다.
   `src/components/shared/` 를 먼저 조회한다. 비슷한 것이 있으면 variant를 추가하지 새로 만들지 않는다.
 - 스토리 작성 형식은 `src/design-system/_story-template.tsx` 를 따른다.
   `title` 은 계층을 그대로 반영한다: `Atoms/Button`, `Molecules/FormField`, `Organisms/ReviewList`.
+
+## 자동 점검 — 흐트러짐 조기 발견
+
+작은 수정이 쌓이면 구조가 서서히 흐트러진다. 커밋 시 아래를 **경고**한다 (차단하지 않음):
+
+| 점검 | 경고 조건 | 대응 |
+|------|-----------|------|
+| 페이지 비대화 | 페이지에 `<button>`·`<input>` 등 원시 컨트롤 추가, 기본 태그(`<div>`·`<p>` 등) 3개 이상 증가, 페이지 CSS에 꾸밈 속성(색·테두리·그림자·글꼴) 추가 | 부품으로 빼고 페이지는 조립만 |
+| atom 비대화 | atom이 다른 atom을 import, props 8개 초과, 150줄 초과 | molecule로 승격하거나 쪼갠다 |
+| 부품 중복 | 새 부품 이름이 기존 design-system 부품과 끝단어가 같거나 동의어(Badge/Tag/Chip 등), 또는 오타 수준 차이 | 재사용·variant 추가 먼저 검토 |
+
+- 페이지에 인라인 스타일(`style={{...}}`)을 새로 넣는 것은 **쓰기 시점에 거부**된다.
+  동적 값은 CSS 변수로만 넘긴다: `style={{ '--progress': value }}`
+- 기준값은 `.harness/config.json` 의 `structure` 로 조정한다:
+  `{ "structure": { "atomMaxProps": 8, "atomMaxLines": 150, "pageRawTagGrowth": 3 } }`
+- 이름이 전혀 다른 중복(`Badge` ↔ `OrderLabel`)은 못 잡는다. 새 부품 전에 목록을 직접 조회하는 습관이 우선이다.
+- 전체 점검 리포트: `node .harness/gates/structure-check.mjs`

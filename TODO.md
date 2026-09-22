@@ -233,6 +233,22 @@
 - [x] DECISIONS.md: #36 기록
 - [x] npm run check 통과 (typecheck → build → test) — 103/103 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/18
+- [x] npm publish (PR 병합 후)
+
+## v0.7.0 — 구조 흐트러짐 점검 (DECISIONS #37)
+
+- [x] ui-prereq-check.mjs: 페이지 인라인 스타일 추가 시 쓰기 시점 거부
+- [x] structure-check.mjs: 페이지 비대화·atom 비대화·부품 중복 커밋 경고 + 직접 실행 리포트
+- [x] gate.mjs: 경고를 Claude additionalContext/systemMessage, Cursor ask 로 전달 (0.6.0 stderr 경고는 안 보였음)
+- [x] Claude Code 통과 시 무출력 — 명시적 allow 가 권한 확인을 건너뛰던 문제 수정
+- [x] gate.mjs: Cursor 거절 메시지 필드 snake_case 로 수정
+- [x] registry.ts: design-system 모듈 시 structure-check.mjs 설치
+- [x] 30-design-system.md / ds-add.md / ux-review.md / AGENTS.md 갱신
+- [x] test/structure-check.test.ts (29) + scaffold 테스트 2개 + 스냅샷
+- [x] package.json: 버전 0.7.0
+- [x] DECISIONS.md: #37 기록
+- [x] npm run check 통과 — 134/134 tests passed
+- [ ] PR 생성 (main 대상)
 - [ ] npm publish (PR 병합 후)
 
 ## 아이디어 (버전 미정)

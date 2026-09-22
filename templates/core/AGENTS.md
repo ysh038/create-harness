@@ -43,7 +43,11 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 - 테스트를 통과시키기 위해 단정문(assertion)을 약화시키지 않는다. 실패하면 코드를 고친다.
 {{#if DESIGN_SYSTEM}}- **Write-time enforcement**: UI 파일(페이지, design-system 컴포넌트) 작성 시점에 다음을 차단한다:
   * Storybook `pending`/`ready` 상태인데 `.storybook/` 없으면 → `/ds-init` 먼저 실행
+  * 페이지 파일에 인라인 스타일(`style={{...}}`)을 **새로** 추가하면 거부 (CSS 변수만 넘기는 경우는 허용)
   * 커밋하지 않아도 **파일 쓰기 시점에** 차단되므로 정책 위반 코드가 남지 않는다.
+- **구조 점검 경고** (커밋 시, 차단 안 함): 페이지에 원시 컨트롤·기본 태그·꾸밈 CSS가 늘거나,
+  atom이 다른 atom을 조합하거나 props·줄 수가 기준을 넘거나, 새 부품 이름이 기존 부품과 비슷하면 경고한다.
+  경고를 받으면 **사용자에게 알리고 정리할지 물어본다.** 전체 점검: `node .harness/gates/structure-check.mjs`
 {{/if}}{{#if HAS_DESIGN_REFS}}- **Design ref enforcement**: inspire/implement 모드에서 페이지/화면 작성 시 design-references.json 항목 필요.
   * 항목 없으면 파일 쓰기가 차단되고, 먼저 디자인 참조를 물어보라는 메시지가 표시된다.
   * 읽기 실패한 참조(lastReadOk: false)로는 UI 작성 불가 — 다른 참조 제공 또는 명시적 waive 필요.
@@ -134,7 +138,8 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `.env*` 파일 커밋 | 시크릿 유출 |
 | 라우트(페이지) 컴포넌트에 비즈니스 로직 | hooks/queries 레이어로 내린다 (`{{RULES_DIR}}/10-architecture` 참고) |
 {{#if DESIGN_SYSTEM}}| CSS 색상 원시값 (`#hex`, `rgb()`) | 디자인 토큰만 사용. stylelint가 error 처리 |
-| 페이지 파일에 일회성 마크업·스타일 | Atomic 계층부터 만들고 페이지는 조립만 (`{{RULES_DIR}}/30-design-system`) |
+| 페이지 파일에 일회성 마크업·스타일 | Atomic 계층부터 만들고 페이지는 조립만 (`{{RULES_DIR}}/30-design-system`). 인라인 스타일은 쓰기 시점에 거부, 나머지는 커밋 시 경고 |
+| 비슷한 부품 새로 만들기 (기존 `Badge` 두고 `StatusTag` 등) | 기존 부품 재사용 또는 variant/prop 추가가 먼저. 커밋 시 이름 유사도로 경고 |
 | Atomic 계층 역방향 import (atom → molecule 등) | 재사용 단위가 상위 계층에 끌려간다. ESLint가 error 처리 |
 | **Storybook ready: 새 design-system 컴포넌트를 stories 없이 커밋** | **각 컴포넌트 옆에 `<Name>.stories.tsx` 필수. Write/Shell 게이트 + 커밋 게이트가 차단** |
 {{/if}}{{#if HAS_DESIGN_REFS}}| **inspire/implement 모드: 디자인 참조 없이 새 페이지/화면 UI 작성** | **반드시 먼저** design-references.json 에 기록하거나 사용자에게 디자인 링크를 물어본다. 커밋 게이트가 누락 시 실패 처리 |

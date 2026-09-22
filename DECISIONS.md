@@ -1879,3 +1879,86 @@ scaffold 단계의 코드 예시를 넣어 "무엇을 쓰고 무엇을 쓰지 �
 - `npm run check` 통과 (typecheck → build → test)
 - PR 생성 (main 대상)
 - npm publish (PR 병합 후, 수동)
+
+## 37. v0.7.0 — 구조 흐트러짐 점검 + 훅 출력 규격 정리
+
+### 배경
+
+0.6.0까지의 검사는 "새 화면을 처음 만들 때"에 집중되어 있었다. 그런데 실제 바이브코딩은
+처음 만든 뒤 작은 요청("여기 안내 박스 하나", "상태 표시 추가")이 계속 쌓이는 형태다.
+이 단계에서 세 가지 흐트러짐이 생기는데, 어떤 검사도 잡지 못했다:
+
+1. **페이지 비대화** — 부품을 만들지 않고 페이지에 `<div>`·스타일을 바로 씀
+2. **부품 중복** — 기존 `Badge`를 두고 `StatusTag`를 새로 만듦
+3. **atom 비대화** — atom에 prop이 계속 붙어 사실상 molecule이 됨
+
+### 결정
+
+**명백한 것만 쓰기 시점에 거부, 나머지는 커밋 시 경고.**
+
+| 점검 | 시점 | 방식 |
+|------|------|------|
+| 페이지에 인라인 스타일(`style={{}}`) 추가 | 쓰기 시점 | 거부 (개수가 늘 때만 — 기존 코드는 건드리지 않음). CSS 변수만 넘기는 경우 허용 |
+| 페이지에 원시 컨트롤·기본 태그 증가, 페이지 CSS에 꾸밈 속성 추가 | 커밋 | 경고 |
+| atom이 다른 atom import, props·줄 수 초과 | 커밋 | 경고 |
+| 새 부품 이름이 기존 부품과 비슷 | 커밋 | 경고 |
+
+인라인 스타일만 거부하는 이유: 판단 여지가 거의 없다. `<div>` 몇 개는 정당한 레이아웃 래퍼일 수 있어
+거부하면 오탐이 잦다. 부품 중복·비대화는 "같은 역할인가"라는 판단이 필요해 거부할 근거가 약하다.
+
+**페이지 비교는 증가분만 본다** (staged vs HEAD). 기존 페이지에 원래 있던 마크업으로 매번 경고하면
+경고가 무시되는 소음이 된다.
+
+**중복 판정**:
+- 이름이 같거나 오타 수준 차이 (5자 이상, 편집 거리 ≤ 2)
+- 기존 쪽이 design-system 부품일 때만: 끝단어가 같거나 동의어 묶음 (Badge/Tag/Chip/Pill 등)
+- 도메인 부품끼리는 끝단어 비교 안 함 (`LoginForm` ↔ `SignupForm` 은 정상)
+- 이름이 전혀 다른 중복(`Badge` ↔ `OrderLabel`)은 **못 잡는다** — 문서에 한계로 명시
+
+기준값(`atomMaxProps: 8`, `atomMaxLines: 150`, `pageRawTagGrowth: 3`)은 프로젝트마다 적정값이 달라
+`config.json` 의 `structure` 로 조정 가능하게 했다.
+
+전체 점검 리포트(`node .harness/gates/structure-check.mjs`)를 `/ux-review` 첫 단계에 넣었다 —
+커밋 경고는 이번 변경만 보므로, 쌓인 흐트러짐은 주기적 점검으로 정리한다.
+
+### 경고 전달 경로 — 0.6.0 경고가 실제로는 안 보였다
+
+공식 훅 문서 확인 결과:
+- **Claude Code**: exit 0의 stderr는 디버그 로그로만 가고 에이전트도 사용자도 못 본다.
+  0.6.0의 layout-first 커밋 경고는 stderr로 출력했으므로 **아무에게도 전달되지 않았다.**
+  → `additionalContext`(에이전트) + `systemMessage`(사용자)로 보낸다.
+- **Cursor**: 통과 응답에 메시지를 붙이는 필드가 없다. → 경고가 있으면 `permission: 'ask'`로
+  사용자에게 보여주고 진행 여부를 맡긴다.
+
+### 함께 고친 기존 버그
+
+1. **Claude Code에서 통과 시 명시적 `permissionDecision: 'allow'`를 반환** — 이 값은 사용자의
+   권한 확인을 건너뛰고 도구 실행을 자동 승인한다. 커밋 검사는 모든 Bash 명령에 걸려 있으므로,
+   하네스를 설치하면 **모든 셸 명령이 사용자 확인 없이 실행**되던 상태였다. 쓰기 검사도 마찬가지.
+   → 통과 시 아무것도 출력하지 않아 원래 권한 흐름을 따르게 한다. (Cursor의 `allow`는 "이의 없음"
+   의미라 유지. 빈 출력은 Cursor에서 오히려 차단으로 처리된다.)
+2. **Cursor 거절 메시지 필드 이름** — `gate.mjs`가 `userMessage`/`agentMessage`(camelCase)를 썼다.
+   문서 규격은 `user_message`/`agent_message`. 거절은 되지만 사유가 전달되지 않았다.
+
+### 변경 파일
+
+- `templates/core/gates/structure-check.mjs`: 신규 — 커밋 시 분석 + 직접 실행 리포트
+- `templates/core/gates/ui-prereq-check.mjs`: `countInlineStyles`, `checkPageInlineStyle` 추가
+- `templates/core/gates/pre-write-gate.mjs`: 인라인 스타일 체크 연결, Claude 통과 시 무출력
+- `templates/core/gates/before-shell-gate.mjs`: 인라인 스타일 체크 연결, Claude 통과 시 무출력
+- `templates/core/gates/gate.mjs`: 경고 전달 경로 교체, Claude 통과 시 무출력, Cursor 필드명 수정
+- `src/registry.ts`: design-system 모듈 선택 시 `structure-check.mjs` 설치
+- `templates/core/conventions/30-design-system.md`: "자동 점검" 섹션
+- `templates/core/workflows/ds-add.md`, `ux-review.md`, `templates/core/AGENTS.md`
+- `test/structure-check.test.ts`: 신규 29 테스트, `test/scaffold.test.ts`: 2 테스트 + 스냅샷
+- `package.json`: 0.6.0 → **0.7.0**
+
+### 버전
+
+`package.json` → **0.7.0** (minor — 새 점검 추가, Claude Code 권한 동작 변경 포함)
+
+### 완료 조건
+
+- `npm run check` 통과
+- PR 생성 (main 대상)
+- npm publish (PR 병합 후)

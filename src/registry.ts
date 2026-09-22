@@ -336,6 +336,16 @@ const buildGateActions = (
         })
     }
 
+    // design-system 모듈 선택 시 구조 흐트러짐 점검 추가 — 커밋 경고 + 직접 실행 리포트 (0.7.0)
+    if (options.modules.includes('design-system')) {
+        actions.push({
+            dest: '.harness/gates/structure-check.mjs',
+            content: loadTemplate('core/gates/structure-check.mjs', vars),
+            module: 'core',
+            executable: true,
+        })
+    }
+
     // design-system 모듈이 있으면 pre-write-gate 추가 (Storybook 체크) (0.5.4)
     // 또는 inspire/implement 모드면 추가 (design ref 체크)
     if (options.modules.includes('design-system') || options.mode !== 'free') {

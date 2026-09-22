@@ -16,6 +16,18 @@ description: Review a UI diff for interaction states, token usage, and visual po
 - `/ds-add`로 atom/molecule/organism을 만들거나 고친 직후, `/ship` 전에
 - 이미 있는 화면의 완성도를 점검하고 싶을 때 (대상 경로를 지정해 범위를 좁혀도 된다)
 
+## 먼저 자동 점검 리포트
+
+체크리스트 전에 구조 점검을 돌려 쌓인 흐트러짐부터 본다:
+
+```bash
+node .harness/gates/structure-check.mjs
+```
+
+페이지에 남은 원시 마크업, 비대해진 atom, 비슷한 부품 후보가 나온다. 경고일 뿐이라
+전부 고칠 필요는 없다 — 정리할 항목은 사용자와 정하고, 아래 "직접 고쳐도 되는 범위" 밖이면
+`/spec` 으로 넘긴다.
+
 ## 체크리스트
 
 diff(또는 지정된 범위)에서 아래를 확인한다. 전부 시각적 판단이 필요해 정적 분석으로

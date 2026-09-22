@@ -8,7 +8,8 @@
  * 1. Storybook: pending/ready 상태인데 .storybook/ 없으면 deny
  * 2. Design ref: inspire/implement 모드에서 페이지 쓸 때 design-references.json 항목 필요
  * 3. Layout-first: implement 모드에서 뼈대(data-slot) 없는 페이지에 알맹이 쓰기 차단 (0.6.0)
- * 4. Stories pair: Storybook ready 시 새 DS 컴포넌트는 stories 필요
+ * 4. 페이지 인라인 스타일: design-system이 있으면 페이지에 style={{}} 추가 차단 (0.7.0)
+ * 5. Stories pair: Storybook ready 시 새 DS 컴포넌트는 stories 필요
  *
  * 사용: pre-write-gate.mjs <cursor|claude>  (훅 입력 JSON은 stdin)
  */
@@ -23,6 +24,7 @@ import {
     checkDesignRefPrereq,
     checkStoriesPair,
     checkLayoutScaffold,
+    checkPageInlineStyle,
 } from './ui-prereq-check.mjs'
 
 const tool = process.argv[2] === 'claude' ? 'claude' : 'cursor'
@@ -31,6 +33,9 @@ const harnessRoot = path.resolve(gatesDir, '..')
 
 const respond = (decision, userMsg, agentMsg) => {
     if (tool === 'claude') {
+        // 통과 시에는 아무것도 출력하지 않는다 — 명시적 'allow'는 사용자의 권한 확인을
+        // 건너뛰게 만든다. 출력이 없으면 Claude Code의 원래 권한 흐름을 그대로 따른다. (0.7.0)
+        if (decision === 'allow') process.exit(0)
         console.log(
             JSON.stringify({
                 hookSpecificOutput: {
@@ -102,6 +107,17 @@ const extractIncomingText = (input) => {
     return JSON.stringify(toolInput)
 }
 
+// 이번 쓰기로 사라질 텍스트 추출 (인라인 스타일 증감 판정용, 0.7.0)
+// Edit·StrReplace: old_string, MultiEdit: edits[].old_string, Write: 기존 파일 전체
+const extractReplacedText = (input, absPath) => {
+    const toolInput = input.tool_input ?? input
+    if (typeof toolInput?.old_string === 'string') return toolInput.old_string
+    if (Array.isArray(toolInput?.edits)) {
+        return toolInput.edits.map((e) => e?.old_string ?? '').join('\n')
+    }
+    return existsSync(absPath) ? readFileSync(absPath, 'utf-8') : ''
+}
+
 const filePath = extractFilePath(input)
 if (!filePath) {
     // 파일 경로를 추출할 수 없으면 판단 불가 — 허용
@@ -156,7 +172,18 @@ if (layoutCheck.deny) {
     respond('deny', layoutCheck.userMsg, layoutCheck.agentMsg)
 }
 
-// 4. Stories pair 체크 (Storybook ready + 새 DS 컴포넌트)
+// 4. 페이지 인라인 스타일 체크 (0.7.0)
+const inlineStyleCheck = checkPageInlineStyle(
+    projectRoot,
+    relPath,
+    extractIncomingText(input),
+    extractReplacedText(input, path.resolve(filePath)),
+)
+if (inlineStyleCheck.deny) {
+    respond('deny', inlineStyleCheck.userMsg, inlineStyleCheck.agentMsg)
+}
+
+// 5. Stories pair 체크 (Storybook ready + 새 DS 컴포넌트)
 if (isDesignSystemComponent(relPath)) {
     // Write로 새 파일 생성 중 (기존 파일 없음 → 새 파일)
     const absPath = path.resolve(filePath)
