@@ -265,7 +265,7 @@
 - [x] package.json: 버전 1.0.0
 - [x] DECISIONS.md: #38 기록
 - [x] npm run check 통과 — 143/143 tests passed
-- [ ] PR 생성 (main 대상)
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/20
 - [ ] npm publish (PR 병합 후)
 - [ ] 첫 실사용: Claude Code에서 qa-tester 도구 제한·Playwright MCP 실제 동작 확인
 
