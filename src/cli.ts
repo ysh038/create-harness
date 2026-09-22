@@ -8,7 +8,7 @@ import * as p from '@clack/prompts'
 import pc from 'picocolors'
 
 import { detect } from './detect.js'
-import { writeActions, writeManifest } from './manifest.js'
+import { readManifest, writeActions, writeManifest } from './manifest.js'
 import { runPrompts } from './prompts.js'
 import { patchEslintIgnores } from './eslintPatch.js'
 import { patchTailwind } from './tailwindPatch.js'
@@ -455,10 +455,12 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
         }
     }
 
-    const results = writeActions(plan, targetDir, options.dryRun)
-    writeManifest(results, options, getOwnVersion(), options.dryRun)
+    const previousManifest = readManifest(targetDir)
+    const results = writeActions(plan, targetDir, options.dryRun, previousManifest)
+    writeManifest(results, options, getOwnVersion(), options.dryRun, previousManifest)
 
-    const written = results.filter((result) => !result.placedInIncoming)
+    const written = results.filter((result) => !result.placedInIncoming && !result.updated)
+    const updated = results.filter((result) => result.updated)
     const incoming = results.filter((result) => result.placedInIncoming)
 
     const header = options.dryRun
@@ -467,6 +469,14 @@ Non-TTY 또는 자동화: 모든 필수 답변을 --플래그 및/또는 --confi
     console.log(`\n${header} — ${detected.projectName} (${options.preset})`)
     for (const result of written) {
         console.log(`  ${pc.green('+')} ${result.dest}`)
+    }
+    if (updated.length > 0) {
+        console.log(
+            `\n${pc.cyan('업데이트')} — 이전 설치 이후 손대지 않은 하네스 파일을 새 버전으로 교체했습니다:`,
+        )
+        for (const result of updated) {
+            console.log(`  ${pc.cyan('↻')} ${result.dest}`)
+        }
     }
     if (incoming.length > 0) {
         console.log(

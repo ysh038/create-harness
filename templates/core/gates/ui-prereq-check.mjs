@@ -4,7 +4,7 @@
 /**
  * ui-prereq-check.mjs — UI 파일 작성 전제조건 체크 (공유 모듈)
  *
- * pre-write-gate.mjs 및 shell-gate.mjs 양쪽에서 사용하는 공통 로직.
+ * pre-write-gate.mjs 및 before-shell-gate.mjs 양쪽에서 사용하는 공통 로직.
  * 드리프트 방지: 같은 규칙을 두 곳에서 다르게 구현하지 않기 위함.
  */
 import { existsSync, readFileSync } from 'node:fs'

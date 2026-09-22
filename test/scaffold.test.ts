@@ -5,8 +5,9 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 // 빌드 산출물을 테스트한다 (npm run check 가 build → test 순서를 보장)
+import { detect } from '../dist/detect.js'
 import { patchEslintIgnores } from '../dist/eslintPatch.js'
-import { writeActions } from '../dist/manifest.js'
+import { sha256, writeActions, writeManifest } from '../dist/manifest.js'
 import { buildChecks, buildPlan, requiredDevDeps } from '../dist/registry.js'
 import { recommendedModules, suggestModules } from '../dist/suggest.js'
 import type { IDetectResult, IScaffoldOptions } from '../src/types.js'
@@ -438,6 +439,48 @@ describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () =
         ).toBe(true)
     })
 
+    describe('QA 에이전트 (1.0.0)', () => {
+        const planFor = (agents: IScaffoldOptions['agents']) =>
+            buildPlan(fakeDetect(), { ...fullOptions('/tmp/fake'), agents })
+        const find = (plan: ReturnType<typeof buildPlan>, dest: string) =>
+            plan.find((action) => action.dest === dest)
+
+        it('Claude: qa 스킬 + 브라우저 도구만 쓰는 qa-tester 에이전트를 만든다', () => {
+            const plan = planFor(['claude'])
+            expect(find(plan, '.claude/skills/qa/SKILL.md')).toBeDefined()
+            const agent = find(plan, '.claude/agents/qa-tester.md')!.content
+            expect(agent).toContain('name: qa-tester')
+            // 코드를 모르는 상태가 설정으로 보장되어야 한다
+            expect(agent).toMatch(/^tools: mcp__playwright$/m)
+            expect(agent).toMatch(/^omitClaudeMd: true$/m)
+            expect(agent).not.toMatch(/^tools:.*\b(Read|Grep|Glob|Bash|Edit|Write)\b/m)
+        })
+
+        it('Cursor만: .cursor/agents 에 readonly 에이전트 + 지시문 경고를 만든다', () => {
+            const plan = planFor(['cursor'])
+            expect(find(plan, '.cursor/commands/qa.md')).toBeDefined()
+            expect(find(plan, '.claude/agents/qa-tester.md')).toBeUndefined()
+            const agent = find(plan, '.cursor/agents/qa-tester.md')!.content
+            expect(agent).toMatch(/^readonly: true$/m)
+            expect(agent).toContain('Cursor에서 실행 중')
+            // Claude 전용 설정이 섞이지 않는다
+            expect(agent).not.toContain('mcpServers')
+        })
+
+        it('둘 다: Cursor도 읽는 .claude/agents 파일 하나만 만든다 (이름 충돌 방지)', () => {
+            const plan = planFor(['cursor', 'claude'])
+            expect(find(plan, '.claude/agents/qa-tester.md')).toBeDefined()
+            expect(find(plan, '.cursor/agents/qa-tester.md')).toBeUndefined()
+        })
+
+        it('/qa 워크플로는 QA 에이전트에게 코드 힌트를 넘기지 말라고 명시한다', () => {
+            const skill = find(planFor(['claude']), '.claude/skills/qa/SKILL.md')!.content
+            expect(skill).toContain('넘기지 않는 것')
+            expect(skill).toContain('qa-tester')
+            expect(skill).not.toMatch(/\{\{[A-Z_]+\}\}/)
+        })
+    })
+
     it('structure-check.mjs는 design-system 모듈이 있을 때만 생성한다 (0.7.0)', () => {
         const hasStructureCheck = (modules: IScaffoldOptions['modules']) =>
             buildPlan(fakeDetect(), { ...fullOptions('/tmp/fake'), mode: 'implement', modules }).some(
@@ -801,12 +844,90 @@ describe('writeActions 충돌 처리', () => {
         ).toBe(true)
     })
 
+    describe('업그레이드 (1.0.0)', () => {
+        const previousWith = (files: { path: string; content: string }[]) => ({
+            version: '0.7.0',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            preset: 'react-fe',
+            agents: ['cursor', 'claude'] as IScaffoldOptions['agents'],
+            modules: [] as IScaffoldOptions['modules'],
+            files: files.map((file) => ({ path: file.path, sha256: sha256(file.content), module: 'core' })),
+        })
+
+        it('이전 설치 이후 손대지 않은 파일은 새 버전으로 교체한다', () => {
+            tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+            mkdirSync(path.join(tmp, '.harness', 'gates'), { recursive: true })
+            writeFileSync(path.join(tmp, '.harness/gates/gate.mjs'), '// 0.7.0 버전\n')
+            const previous = previousWith([{ path: '.harness/gates/gate.mjs', content: '// 0.7.0 버전\n' }])
+
+            const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+            const results = writeActions(plan, tmp, false, previous)
+
+            const gate = results.find((result) => result.dest === '.harness/gates/gate.mjs')!
+            expect(gate.updated).toBe(true)
+            expect(gate.placedInIncoming).toBe(false)
+            expect(readFileSync(path.join(tmp, '.harness/gates/gate.mjs'), 'utf-8')).not.toBe('// 0.7.0 버전\n')
+        })
+
+        it('사용자가 고친 파일은 교체하지 않고 incoming 에 둔다', () => {
+            tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+            writeFileSync(path.join(tmp, 'AGENTS.md'), '# 설치 후 사용자가 고친 내용\n')
+            const previous = previousWith([{ path: 'AGENTS.md', content: '# 설치 당시 내용\n' }])
+
+            const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+            const results = writeActions(plan, tmp, false, previous)
+
+            const agents = results.find((result) => result.dest === 'AGENTS.md')!
+            expect(agents.placedInIncoming).toBe(true)
+            expect(agents.updated).toBeUndefined()
+            expect(readFileSync(path.join(tmp, 'AGENTS.md'), 'utf-8')).toBe('# 설치 후 사용자가 고친 내용\n')
+        })
+
+        it('설치 기록이 없던 기존 파일은 교체하지 않는다 (하네스가 만든 파일이 아님)', () => {
+            tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+            writeFileSync(path.join(tmp, 'AGENTS.md'), '# 원래 있던 파일\n')
+
+            const plan = buildPlan(fakeDetect(), fullOptions(tmp))
+            const results = writeActions(plan, tmp, false, previousWith([]))
+
+            expect(results.find((result) => result.dest === 'AGENTS.md')!.placedInIncoming).toBe(true)
+        })
+
+        it('incoming 에 둔 파일은 설치 기록에서 이전 해시를 유지한다', () => {
+            tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
+            writeFileSync(path.join(tmp, 'AGENTS.md'), '# 사용자가 고침\n')
+            const previous = previousWith([{ path: 'AGENTS.md', content: '# 설치 당시 내용\n' }])
+            const options = fullOptions(tmp)
+
+            const results = writeActions(buildPlan(fakeDetect(), options), tmp, false, previous)
+            const manifest = writeManifest(results, options, '1.0.0', true, previous)
+
+            const entry = manifest.files.find((file) => file.path === 'AGENTS.md')
+            expect(entry!.sha256).toBe(sha256('# 설치 당시 내용\n'))
+        })
+    })
+
     it('재실행 시 동일 내용 파일은 충돌로 처리하지 않는다 (멱등성)', () => {
         tmp = mkdtempSync(path.join(tmpdir(), 'harness-test-'))
         const plan = buildPlan(fakeDetect(), fullOptions(tmp))
         writeActions(plan, tmp, false)
         const second = writeActions(plan, tmp, false)
         expect(second.every((result) => !result.placedInIncoming)).toBe(true)
+    })
+})
+
+describe('detect — 재실행(업그레이드) 안정성', () => {
+    it('하네스가 설치한 tokens.css 는 기존 원시 색상 위반으로 잡지 않는다', () => {
+        const tmp = mkdtempSync(path.join(tmpdir(), 'harness-detect-'))
+        try {
+            mkdirSync(path.join(tmp, 'src', 'design-system'), { recursive: true })
+            writeFileSync(path.join(tmp, 'src/design-system/tokens.css'), ':root { --primitive-color-primary: #4f46e5; }')
+            writeFileSync(path.join(tmp, 'src/legacy.css'), '.a { color: #ff0000; }')
+
+            expect(detect(tmp).cssFilesWithRawColor).toEqual(['src/legacy.css'])
+        } finally {
+            rmSync(tmp, { recursive: true, force: true })
+        }
     })
 })
 

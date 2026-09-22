@@ -113,6 +113,8 @@ export interface IWriteResult {
     dest: string
     /** 충돌로 .harness/incoming/ 아래에 배치되었는지 */
     placedInIncoming: boolean
+    /** 이전 설치 이후 사용자가 손대지 않은 파일이라 새 버전으로 교체했는지 (1.0.0) */
+    updated?: boolean
     sha256: string
     module: string
 }

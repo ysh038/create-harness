@@ -122,6 +122,7 @@ node .harness/gates/run-checks.mjs   # 전체 검증 (.harness/config.json 의 c
 | `/impl <slug>` | 명세 기반 구현 — 실패하는 테스트 먼저 (Red → Green → Refactor) |
 | `/verify` | checks 순차 실행, 실패 시 수정 루프 |
 | `/ship` | 검증 → 커밋 → `docs/task-log.md` 기록 |
+| `/qa <목적>` | 코드를 모르는 QA 에이전트(`qa-tester`)가 실제 사용자처럼 앱을 써 보고 리포트 → 확인된 버그만 실패하는 테스트로 (`docs/qa/`) |
 {{#if DESIGN_SYSTEM}}| `/ds-init` | Storybook 온디맨드 설치 (최초 UI 작업 전 1회) |
 | `/ds-add` | 페이지 착수 전 Atomic 계층(atom → molecule → organism) 컴포넌트 + **스토리 선행 추가** (Storybook ready 시 필수) |
 | `/ux-review` | 인터랙션 상태·토큰 사용·시각적 완성도 리뷰 — 테스트로 못 옮기는 품질을 다룬다 |

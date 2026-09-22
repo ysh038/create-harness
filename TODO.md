@@ -249,7 +249,25 @@
 - [x] DECISIONS.md: #37 기록
 - [x] npm run check 통과 — 134/134 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/19
+- [x] npm publish (PR 병합 후)
+
+## v1.0.0 — /qa + 안정성 약속 + 안전한 업그레이드 (DECISIONS #38)
+
+- [x] 실험: 문제 5개 심은 테스트 앱에 블라인드 QA 서브에이전트 2회 실행 → 지시문 보완
+- [x] templates/core/agents/qa-tester.md: QA 에이전트 (Claude: 브라우저 도구만, CLAUDE.md 생략)
+- [x] templates/core/workflows/qa.md: /qa 워크플로 (준비 → 위임 → 저장 → 분류 → 실패하는 테스트)
+- [x] registry.ts: qa 워크플로 + 에이전트 설치 (Claude/Cursor 분기, 이름 충돌 방지)
+- [x] 안전한 업그레이드: 손대지 않은 하네스 파일은 새 버전으로 교체, 고친 파일만 incoming
+- [x] detect.ts: 재실행 시 tokens.css 를 기존 위반으로 잡던 문제 수정
+- [x] README: Upgrading / From 0.x to 1.0 / Stability (1.0+)
+- [x] 오래된 표현 정리, 테스트 stdin 입력 통일, 저장소 AGENTS.md 테스트 규칙
+- [x] 테스트: QA 4 + 업그레이드 4 + detect 1
+- [x] package.json: 버전 1.0.0
+- [x] DECISIONS.md: #38 기록
+- [x] npm run check 통과 — 143/143 tests passed
+- [ ] PR 생성 (main 대상)
 - [ ] npm publish (PR 병합 후)
+- [ ] 첫 실사용: Claude Code에서 qa-tester 도구 제한·Playwright MCP 실제 동작 확인
 
 ## 아이디어 (버전 미정)
 
