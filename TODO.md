@@ -123,7 +123,7 @@
 - [x] test/scaffold.test.ts: design-ref-check 테스트 추가
 - [x] npm run check 통과
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/11
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.5.2
 
@@ -136,7 +136,7 @@
 - [x] DECISIONS.md: #30 기록
 - [x] npm run check 통과 (typecheck → build → test) — 60/60 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/12
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.5.4
 
@@ -152,7 +152,7 @@
 - [x] test/scaffold.test.ts: cursor-hooks.json / claude-settings.json preToolUse 훅 테스트
 - [x] npm run check 통과 (typecheck → build → test) — 64/64 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/14
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.5.5
 
@@ -186,7 +186,7 @@
 ### PR
 - [x] 변경사항 커밋 및 푸시
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/15
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.5.6
 
@@ -202,7 +202,7 @@
 - [x] test/scaffold.test.ts: 기존 테스트 모두 통과 (84/84)
 - [x] npm run check 통과 (typecheck → build → test)
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/16
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.5.7
 
@@ -214,7 +214,7 @@
 - [x] TODO.md: v0.5.7 체크리스트 추가
 - [x] npm run check 통과 (typecheck → build → test) — 88/88 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/17
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 
 ## v0.6.0 — Layout-first (DECISIONS #36)
 
@@ -266,7 +266,7 @@
 - [x] DECISIONS.md: #38 기록
 - [x] npm run check 통과 — 143/143 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/20
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 - [ ] 첫 실사용: Claude Code에서 qa-tester 도구 제한·Playwright MCP 실제 동작 확인
 
 ## v1.0.1 — free 모드 훅 설정 버그 수정 (DECISIONS #39)
@@ -277,7 +277,7 @@
 - [x] DECISIONS.md: #39 기록
 - [x] npm run check 통과 — 146/146 tests passed
 - [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/21
-- [ ] npm publish (PR 병합 후)
+- [x] npm publish (PR 병합 후)
 - [ ] dashboard-app: 1.0.1로 재실행하거나 두 훅 항목 직접 삭제
 
 ## 아이디어 (버전 미정)
