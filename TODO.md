@@ -269,6 +269,17 @@
 - [ ] npm publish (PR 병합 후)
 - [ ] 첫 실사용: Claude Code에서 qa-tester 도구 제한·Playwright MCP 실제 동작 확인
 
+## v1.0.1 — free 모드 훅 설정 버그 수정 (DECISIONS #39)
+
+- [x] registry.ts: 설치하지 않은 before-shell-gate·pre-write-gate 를 훅 설정에서 제외 (stripHooks)
+- [x] 테스트: free 모드 훅 설정 + 훅 스크립트 설치 불변식 + 템플릿 그대로
+- [x] package.json: 버전 1.0.1
+- [x] DECISIONS.md: #39 기록
+- [x] npm run check 통과 — 146/146 tests passed
+- [x] PR 생성 (main 대상) — https://github.com/ysh038/create-harness/pull/21
+- [ ] npm publish (PR 병합 후)
+- [ ] dashboard-app: 1.0.1로 재실행하거나 두 훅 항목 직접 삭제
+
 ## 아이디어 (버전 미정)
 
 (확정 안 된 아이디어는 여기에 적는다. 바로 TODO로 승격하지 않는다.)

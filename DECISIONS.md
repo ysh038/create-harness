@@ -2054,3 +2054,39 @@ scaffold 단계의 코드 예시를 넣어 "무엇을 쓰고 무엇을 쓰지 �
 - `npm run check` 통과
 - PR 생성 (main 대상)
 - npm publish (PR 병합 후)
+
+## 39. v1.0.1 — free 모드에서 설치하지 않은 쓰기·셸 검사를 훅에 등록하지 않는다
+
+### 배경
+
+`--mode free` 에 design-system 모듈을 고르지 않으면 `before-shell-gate.sh`·`pre-write-gate.sh` 를
+설치하지 않는다(0.5.4부터의 조건). 그런데 `.claude/settings.json`·`.cursor/hooks.json` 은 템플릿을 그대로
+써서 두 스크립트가 `failClosed: true` 훅으로 등록됐다. 스크립트 파일이 없으니 훅이 매번 실패하고,
+그 프로젝트에서는 **모든 파일 쓰기와 셸 실행이 막혔다.** 실사용 프로젝트(`dashboard-app`)에서 발견.
+
+### 결정 — 훅 설정은 실제로 설치한 스크립트만 부른다
+
+- 템플릿은 하나로 유지하고, 스크립트를 설치하지 않는 조합에서만 `stripHooks()` 로 해당 항목을 지운다.
+  비게 된 묶음(Claude의 쓰기 matcher 그룹, Cursor의 `preToolUse` 이벤트)도 함께 지운다.
+- 설치하는 조합은 템플릿을 그대로 쓴다 — 기존 설치의 manifest 해시가 바뀌지 않는다.
+- 조합별 템플릿 파일을 따로 두는 안은 버렸다. 템플릿이 갈라지면 한쪽만 고치는 일이 생긴다.
+- 불변식 테스트: 모든 모드·모듈 조합에서 훅 설정이 부르는 `.harness/gates/*` 가 설치 목록에 있어야 한다.
+  설정 파일과 설치 조건이 다시 어긋나면 이 테스트가 잡는다.
+
+### 이미 설치된 프로젝트
+
+이 수정으로 저절로 고쳐지지 않는다. 1.0.1로 CLI를 다시 실행하면, 사용자가 손대지 않은 설정 파일은
+1.0.0의 안전한 업그레이드(#38)로 새 내용으로 교체된다. 손댄 경우엔 `.harness/incoming/` 에 놓이므로
+두 항목을 직접 지운다.
+
+### 변경 파일
+
+- `src/registry.ts`: `stripHooks`, `buildGateActions` 의 훅 설정 생성
+- `test/scaffold.test.ts`: free 모드 훅 설정 1 + 불변식 1 + 템플릿 그대로 1
+- `package.json`: 1.0.0 → **1.0.1** (patch — bug fix)
+
+### 완료 조건
+
+- `npm run check` 통과
+- PR 생성 (main 대상)
+- npm publish (PR 병합 후)
