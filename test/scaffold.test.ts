@@ -516,6 +516,68 @@ describe('design-ref-check.mjs — inspire/implement 모드 강제 검증', () =
         ).toBe(false)
     })
 
+    it('free 모드에서 design-system 모듈 없으면 훅 설정에 쓰기·셸 검사를 등록하지 않는다 (1.0.1 재발 방지)', () => {
+        const plan = buildPlan(fakeDetect(), {
+            ...fullOptions('/tmp/fake'),
+            mode: 'free',
+            modules: ['auth-http', 'lint'],
+        })
+        const claude = plan.find((a) => a.dest === '.claude/settings.json')!.content
+        const cursor = plan.find((a) => a.dest === '.cursor/hooks.json')!.content
+
+        for (const content of [claude, cursor]) {
+            expect(content).not.toContain('before-shell-gate')
+            expect(content).not.toContain('pre-write-gate')
+            expect(content).toContain('pre-commit-gate.sh')
+        }
+        expect(JSON.parse(claude).hooks.PreToolUse).toEqual([
+            {
+                matcher: 'Bash',
+                hooks: [
+                    {
+                        type: 'command',
+                        command: '"$CLAUDE_PROJECT_DIR"/.harness/gates/pre-commit-gate.sh claude',
+                        timeout: 600,
+                    },
+                ],
+            },
+        ])
+        const cursorHooks = JSON.parse(cursor).hooks
+        expect(cursorHooks.preToolUse).toBeUndefined()
+        expect(cursorHooks.beforeShellExecution).toEqual([
+            { command: './.harness/gates/pre-commit-gate.sh cursor' },
+        ])
+    })
+
+    it('훅 설정이 부르는 스크립트는 모든 모드·모듈 조합에서 실제로 설치된다', () => {
+        const combos: Array<Pick<IScaffoldOptions, 'mode' | 'modules'>> = [
+            { mode: 'free', modules: ['lint'] },
+            { mode: 'free', modules: ['design-system', 'lint'] },
+            { mode: 'inspire', modules: ['lint'] },
+            { mode: 'implement', modules: ['design-system', 'lint'] },
+        ]
+        for (const combo of combos) {
+            const plan = buildPlan(fakeDetect(), { ...fullOptions('/tmp/fake'), ...combo })
+            const dests = new Set(plan.map((a) => a.dest))
+            for (const file of ['.claude/settings.json', '.cursor/hooks.json']) {
+                const content = plan.find((a) => a.dest === file)!.content
+                const scripts = content.match(/\.harness\/gates\/[\w.-]+/g) ?? []
+                expect(scripts.length, `${combo.mode} ${file}`).toBeGreaterThan(0)
+                for (const script of scripts) {
+                    expect(dests.has(script), `${combo.mode}/${combo.modules} ${file} → ${script}`).toBe(true)
+                }
+            }
+        }
+    })
+
+    it('쓰기 검사를 설치하는 조합에서는 훅 설정을 템플릿 그대로 쓴다', () => {
+        const plan = buildPlan(fakeDetect(), { ...fullOptions('/tmp/fake'), mode: 'implement' })
+        const claude = plan.find((a) => a.dest === '.claude/settings.json')!.content
+        expect(claude).toBe(
+            readFileSync(path.resolve(__dirname, '../templates/core/gates/claude-settings.json'), 'utf8'),
+        )
+    })
+
     it('inspire/implement에서 config.json checks에 design-ref가 포함된다', () => {
         const implementPlan = buildPlan(fakeDetect(), {
             ...fullOptions('/tmp/fake'),
