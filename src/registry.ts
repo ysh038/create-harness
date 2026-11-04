@@ -348,7 +348,8 @@ const buildGateActions = (
 
     // design-system 모듈이 있으면 pre-write-gate 추가 (Storybook 체크) (0.5.4)
     // 또는 inspire/implement 모드면 추가 (design ref 체크)
-    if (options.modules.includes('design-system') || options.mode !== 'free') {
+    const hasWriteGates = options.modules.includes('design-system') || options.mode !== 'free'
+    if (hasWriteGates) {
         // 공유 체크 모듈 추가 (0.5.5)
         actions.push({
             dest: '.harness/gates/ui-prereq-check.mjs',
@@ -382,21 +383,57 @@ const buildGateActions = (
         )
     }
 
+    // 설치하지 않은 스크립트를 훅에 등록하면 failClosed 때문에 모든 쓰기·셸 실행이 막힌다 (1.0.1)
+    const hookConfig = (template: string): string => {
+        const content = loadTemplate(template, vars)
+        return hasWriteGates ? content : stripHooks(content, WRITE_GATE_SCRIPTS)
+    }
+
     if (options.agents.includes('cursor')) {
         actions.push({
             dest: '.cursor/hooks.json',
-            content: loadTemplate('core/gates/cursor-hooks.json', vars),
+            content: hookConfig('core/gates/cursor-hooks.json'),
             module: 'core',
         })
     }
     if (options.agents.includes('claude')) {
         actions.push({
             dest: '.claude/settings.json',
-            content: loadTemplate('core/gates/claude-settings.json', vars),
+            content: hookConfig('core/gates/claude-settings.json'),
             module: 'core',
         })
     }
     return actions
+}
+
+const WRITE_GATE_SCRIPTS = ['before-shell-gate.sh', 'pre-write-gate.sh']
+
+/**
+ * 훅 설정 JSON에서 주어진 스크립트를 부르는 항목을 지운다.
+ * Claude(matcher 그룹 안의 hooks 배열)와 Cursor(이벤트별 평평한 배열) 형식을 모두 처리하고,
+ * 비게 된 그룹·이벤트는 함께 지운다.
+ */
+export const stripHooks = (json: string, scripts: readonly string[]): string => {
+    const calls = (command: unknown) =>
+        typeof command === 'string' && scripts.some((s) => command.includes(s))
+
+    type HookEntry = { command?: unknown; hooks?: HookEntry[] }
+    const parsed = JSON.parse(json) as { hooks: Record<string, HookEntry[]> }
+
+    for (const [event, entries] of Object.entries(parsed.hooks)) {
+        const kept = entries
+            .map((entry) =>
+                Array.isArray(entry.hooks)
+                    ? { ...entry, hooks: entry.hooks.filter((h) => !calls(h.command)) }
+                    : entry,
+            )
+            .filter((entry) =>
+                Array.isArray(entry.hooks) ? entry.hooks.length > 0 : !calls(entry.command),
+            )
+        if (kept.length > 0) parsed.hooks[event] = kept
+        else delete parsed.hooks[event]
+    }
+    return JSON.stringify(parsed, null, 4) + '\n'
 }
 
 /**
